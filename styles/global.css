@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply antialiased bg-gray-50;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors;
+  }
+  
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+  
+  .form-input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+  
+  .contract-preview {
+    font-family: 'Times New Roman', serif;
+    @apply text-gray-900 leading-relaxed;
+  }
+  
+  .contract-preview h1, .contract-preview h2, .contract-preview h3 {
+    @apply font-bold mb-4;
+  }
+  
+  .contract-preview h1 {
+    @apply text-2xl;
+  }
+  
+  .contract-preview h2 {
+    @apply text-xl;
+  }
+  
+  .contract-preview h3 {
+    @apply text-lg;
+  }
+  
+  .contract-preview p {
+    @apply mb-3;
+  }
+  
+  .contract-preview ul, .contract-preview ol {
+    @apply ml-6 mb-3;
+  }
+  
+  .contract-preview li {
+    @apply mb-1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .animation-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
