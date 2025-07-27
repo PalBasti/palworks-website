@@ -53,8 +53,6 @@ export default function GarageVertragErlaeuterungen() {
 
               {/* 1. Rechtliche Einordnung */}
               <section>
-              {/* 1. Rechtliche Einordnung */}
-              <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Rechtliche Einordnung</h2>
                 
                 <div className="mb-6">
