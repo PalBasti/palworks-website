@@ -521,7 +521,7 @@ export default function WGUntermietvertragForm({ onSubmit }) {
                 )}
               </div>
             </div>
-
+ </div>
             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Miete</h3>
               <div className="space-y-4">
