@@ -95,48 +95,49 @@ export default function ContractForm({ onSubmit }) {
   const validateForm = () => {
     const newErrors = {}
     
-    // Required fields - NUR 3 Bereiche verpflichtend
+    // FIXED: Dynamische Validierung basierend auf aktueller Formular-Konfiguration
     const requiredFields = [
-      // Art des Mietobjekts
+      // Immer verpflichtend: Art des Mietobjekts
       'garage_type',
-      // Vermieter
+      // Immer verpflichtend: Vermieter
       'landlord_firstname', 'landlord_lastname', 
       'landlord_address', 'landlord_postal', 'landlord_city'
     ]
     
-    // Add garage address fields if not same as landlord
+    // Garage-Adresse nur verpflichtend wenn NICHT gleiche Adresse wie Vermieter
     if (!formData.garage_same_address) {
       requiredFields.push('garage_address', 'garage_postal', 'garage_city')
     }
     
-    // Add lease end if fixed term and lease_start is filled
-    if (formData.garage_lease_type === 'befristet' && formData.lease_start && formData.lease_end) {
+    // Mietende nur verpflichtend wenn befristet UND Datum gesetzt
+    if (formData.garage_lease_type === 'befristet' && formData.lease_start) {
       requiredFields.push('lease_end')
     }
     
+    // Validierung der verpflichtenden Felder
     requiredFields.forEach(field => {
       if (!formData[field] || formData[field].trim() === '') {
         newErrors[field] = 'Dieses Feld ist erforderlich'
       }
     })
     
-    // Validate postal codes (5 digits) - nur wenn ausgefüllt
+    // Validierung PLZ (5 Ziffern) - nur wenn ausgefüllt
     if (formData.landlord_postal && !/^\d{5}$/.test(formData.landlord_postal)) {
       newErrors.landlord_postal = 'PLZ muss 5 Ziffern haben'
     }
-    if (formData.tenant_postal && !/^\d{5}$/.test(formData.tenant_postal)) {
+    if (formData.tenant_postal && formData.tenant_postal && !/^\d{5}$/.test(formData.tenant_postal)) {
       newErrors.tenant_postal = 'PLZ muss 5 Ziffern haben'
     }
     if (!formData.garage_same_address && formData.garage_postal && !/^\d{5}$/.test(formData.garage_postal)) {
       newErrors.garage_postal = 'PLZ muss 5 Ziffern haben'
     }
     
-    // Validate rent (positive number) - nur wenn ausgefüllt
+    // Validierung Miete (positive Zahl) - nur wenn ausgefüllt
     if (formData.rent && (isNaN(formData.rent) || parseFloat(formData.rent) <= 0)) {
       newErrors.rent = 'Miete muss eine positive Zahl sein'
     }
     
-    // Validate IBAN (basic check) - nur wenn ausgefüllt
+    // Validierung IBAN (basic check) - nur wenn ausgefüllt
     if (formData.iban && formData.iban.length < 15) {
       newErrors.iban = 'IBAN scheint zu kurz zu sein'
     }
