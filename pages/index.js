@@ -99,7 +99,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Untermietvertrag - NEU */}
+              {/* Untermietvertrag - Ganze Wohnung */}
               <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
                 <div className="text-center">
                   <div className="text-4xl mb-4">🏠</div>
@@ -107,6 +107,19 @@ export default function Home() {
                   <p className="text-gray-600 text-sm mb-4">Ganze Wohnung rechtssicher untervermieten</p>
                   <div className="text-2xl font-bold text-blue-600 mb-4">ab 12,90 €</div>
                   <Link href="/untermietvertrag" className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors inline-block">
+                    Erstellen
+                  </Link>
+                </div>
+              </div>
+
+              {/* WG-Untermietvertrag - NEU */}
+              <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+                <div className="text-center">
+                  <div className="text-4xl mb-4">🚪</div>
+                  <h3 className="text-xl font-semibold mb-2">WG-Untermietvertrag</h3>
+                  <p className="text-gray-600 text-sm mb-4">Einzelnes Zimmer in Wohngemeinschaft</p>
+                  <div className="text-2xl font-bold text-blue-600 mb-4">ab 9,90 €</div>
+                  <Link href="/wg-untermietvertrag" className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors inline-block">
                     Erstellen
                   </Link>
                 </div>
@@ -301,6 +314,7 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link href="/garage-vertrag" className="hover:text-white">Garage/Stellplatz</Link></li>
                 <li><Link href="/untermietvertrag" className="hover:text-white">Untermietvertrag</Link></li>
+                <li><Link href="/wg-untermietvertrag" className="hover:text-white">WG-Untermietvertrag</Link></li>
                 <li><span className="text-gray-500">Mietvertrag (bald)</span></li>
                 <li><span className="text-gray-500">Arbeitsvertrag (bald)</span></li>
                 <li><span className="text-gray-500">GbR-Vertrag (bald)</span></li>
