@@ -6,6 +6,14 @@ export default function PaymentModal({ isOpen, onClose, contractType, price, con
 
   if (!isOpen) return null
 
+  const getContractTitle = () => {
+    switch (contractType) {
+      case 'garage': return 'Garage/Stellplatz-Mietvertrag'
+      case 'untermietvertrag': return 'Untermietvertrag'
+      default: return 'Vertrag'
+    }
+  }
+
   const handleDemoPayment = () => {
     setStep('processing')
     
@@ -44,7 +52,7 @@ export default function PaymentModal({ isOpen, onClose, contractType, price, con
               <div className="text-center mb-6">
                 <div className="text-4xl mb-3">🛒</div>
                 <h4 className="text-xl font-semibold text-blue-600 mb-2">
-                  {contractType === 'garage' ? 'Garage/Stellplatz-Mietvertrag' : 'Vertrag'}
+                  {getContractTitle()}
                 </h4>
                 <div className="text-3xl font-bold text-gray-900 mb-2">{price} €</div>
               </div>
@@ -74,6 +82,12 @@ export default function PaymentModal({ isOpen, onClose, contractType, price, con
                     <CreditCard className="h-4 w-4 text-green-600 mr-2" />
                     <span>Sichere Zahlung über Stripe</span>
                   </div>
+                  {contractData?.include_protocol && (
+                    <div className="flex items-center">
+                      <FileText className="h-4 w-4 text-green-600 mr-2" />
+                      <span>Übergabeprotokoll mit Ihren Daten</span>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -127,6 +141,26 @@ export default function PaymentModal({ isOpen, onClose, contractType, price, con
                   In der echten Version würden Sie jetzt automatisch den vollständigen 
                   Vertrag als PDF erhalten und eine Bestätigungs-E-Mail bekommen.
                 </p>
+              </div>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                  <span className="flex items-center">
+                    <FileText className="h-4 w-4 mr-2" />
+                    {getContractTitle()}.pdf
+                  </span>
+                  <Download className="h-4 w-4 text-gray-400" />
+                </div>
+                
+                {contractData?.include_protocol && (
+                  <div className="flex items-center justify-between bg-blue-50 p-3 rounded">
+                    <span className="flex items-center">
+                      <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                      Übergabeprotokoll.pdf
+                    </span>
+                    <Download className="h-4 w-4 text-blue-400" />
+                  </div>
+                )}
               </div>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
