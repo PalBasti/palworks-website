@@ -470,6 +470,15 @@ export default function UntermietvertragForm({ onSubmit }) {
           {/* Zusatzprodukt: Übergabeprotokoll */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-300 rounded-lg p-6">
             <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0 mt-1">
+                <input
+                  type="checkbox"
+                  name="include_protocol"
+                  checked={formData.include_protocol}
+                  onChange={handleChange}
+                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+              </div>
               <div className="flex-grow">
                 <div className="flex items-center mb-2">
                   <FileText className="h-5 w-5 text-blue-600 mr-2" />
@@ -543,13 +552,4 @@ export default function UntermietvertragForm({ onSubmit }) {
       </div>
     </div>
   )
-}shrink-0 mt-1">
-                <input
-                  type="checkbox"
-                  name="include_protocol"
-                  checked={formData.include_protocol}
-                  onChange={handleChange}
-                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-              </div>
-              <div className="flex-
+}
