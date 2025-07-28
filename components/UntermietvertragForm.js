@@ -470,7 +470,80 @@ export default function UntermietvertragForm({ onSubmit }) {
           {/* Zusatzprodukt: Übergabeprotokoll */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-300 rounded-lg p-6">
             <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 mt-1">
+              <div className="flex-grow">
+                <div className="flex items-center mb-2">
+                  <FileText className="h-5 w-5 text-blue-600 mr-2" />
+                  <h4 className="text-lg font-semibold text-blue-900">
+                    Übergabeprotokoll hinzufügen
+                  </h4>
+                  <span className="ml-auto bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    +{getProtocolPrice().toFixed(2)} €
+                  </span>
+                </div>
+                <p className="text-blue-800 mb-3">
+                  Professionelles Übergabeprotokoll für die Wohnungsübergabe. Alle Daten werden automatisch 
+                  aus dem Vertrag übernommen - Sie müssen nur noch den Zustand bei der Übergabe dokumentieren.
+                </p>
+                <div className="grid md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center">
+                    <Check className="h-4 w-4 text-green-600 mr-2" />
+                    <span className="text-blue-700">Vollständige Zustandsdokumentation</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className="h-4 w-4 text-green-600 mr-2" />
+                    <span className="text-blue-700">Automatische Datenübernahme</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className="h-4 w-4 text-green-600 mr-2" />
+                    <span className="text-blue-700">Schlüsselübergabe-Dokumentation</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className="h-4 w-4 text-green-600 mr-2" />
+                    <span className="text-blue-700">Zählerstände & Ausstattung</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Preisübersicht */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">💳 Preisübersicht</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Untermietvertrag (ganze Wohnung)</span>
+                <span className="font-medium">{getBasePrice().toFixed(2)} €</span>
+              </div>
+              {formData.include_protocol && (
+                <div className="flex justify-between items-center text-blue-700">
+                  <span className="flex items-center">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Übergabeprotokoll
+                  </span>
+                  <span className="font-medium">{getProtocolPrice().toFixed(2)} €</span>
+                </div>
+              )}
+              <div className="border-t pt-2 flex justify-between items-center text-lg font-bold">
+                <span>Gesamtpreis</span>
+                <span className="text-blue-600">{getTotalPrice()} €</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="text-center">
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Vorschau erstellen
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}shrink-0 mt-1">
                 <input
                   type="checkbox"
                   name="include_protocol"
