@@ -10,6 +10,7 @@ export default function PaymentModal({ isOpen, onClose, contractType, price, con
     switch (contractType) {
       case 'garage': return 'Garage/Stellplatz-Mietvertrag'
       case 'untermietvertrag': return 'Untermietvertrag'
+      case 'wg_untermietvertrag': return 'WG-Untermietvertrag'
       default: return 'Vertrag'
     }
   }
