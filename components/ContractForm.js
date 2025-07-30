@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { HelpCircle } from 'lucide-react'
 
-// Tooltip Komponente AUSSERHALB definiert
+// Tooltip Komponente
 const Tooltip = ({ children, text }) => (
   <div className="group relative inline-block">
     {children}
@@ -51,11 +51,11 @@ export default function ContractForm({ onSubmit }) {
     has_utilities: false,
     has_deposit: false,
     
-    // Bankdaten (OPTIONAL mit Beispielen)
+    // Bankdaten (OPTIONAL)
     iban: '',
     bank: '',
     
-    // NEUE OPTION: Rechtliche Erläuterungen
+    // WICHTIG: Rechtliche Erläuterungen - TESTZEITRAUM KOSTENLOS
     include_explanations: false
   })
 
@@ -82,27 +82,14 @@ export default function ContractForm({ onSubmit }) {
         garage_city: prev.landlord_city
       }))
     }
-    
-    // Auto-calculate deposit (2x monthly rent)
-    if (name === 'rent' && formData.has_deposit) {
-      const rentValue = parseFloat(value) || 0
-      if (rentValue > 0) {
-        setFormData(prev => ({
-          ...prev,
-          deposit: (rentValue * 2).toFixed(2)
-        }))
-      }
-    }
   }
 
   const validateForm = () => {
     const newErrors = {}
     
-    // FIXED: Dynamische Validierung basierend auf aktueller Formular-Konfiguration
+    // Immer verpflichtende Felder
     const requiredFields = [
-      // Immer verpflichtend: Art des Mietobjekts
       'garage_type',
-      // Immer verpflichtend: Vermieter
       'landlord_firstname', 'landlord_lastname', 
       'landlord_address', 'landlord_postal', 'landlord_city'
     ]
@@ -124,7 +111,7 @@ export default function ContractForm({ onSubmit }) {
       }
     })
     
-    // Validierung PLZ (5 Ziffern) - nur wenn ausgefüllt
+    // PLZ Validierung
     if (formData.landlord_postal && !/^\d{5}$/.test(formData.landlord_postal)) {
       newErrors.landlord_postal = 'PLZ muss 5 Ziffern haben'
     }
@@ -135,12 +122,12 @@ export default function ContractForm({ onSubmit }) {
       newErrors.garage_postal = 'PLZ muss 5 Ziffern haben'
     }
     
-    // Validierung Miete (positive Zahl) - nur wenn ausgefüllt
+    // Miete Validierung
     if (formData.rent && (isNaN(formData.rent) || parseFloat(formData.rent) <= 0)) {
       newErrors.rent = 'Miete muss eine positive Zahl sein'
     }
     
-    // Validierung IBAN (basic check) - nur wenn ausgefüllt
+    // IBAN Validierung
     if (formData.iban && formData.iban.length < 15) {
       newErrors.iban = 'IBAN scheint zu kurz zu sein'
     }
@@ -152,6 +139,7 @@ export default function ContractForm({ onSubmit }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (validateForm()) {
+      console.log('Submitting form data:', formData) // Debug
       onSubmit(formData)
     } else {
       // Scroll to first error
@@ -190,13 +178,6 @@ export default function ContractForm({ onSubmit }) {
       case 'stellplatz': return 'Stellplatz an gleicher Adresse wie Vermieter'
       default: return 'Mietobjekt an gleicher Adresse wie Vermieter'
     }
-  }
-
-  // Preisberechnung für Testzeitraum
-  const getPrice = () => {
-    const basePrice = 7.90
-    const explanationsPrice = 4.90
-    return formData.include_explanations ? basePrice + explanationsPrice : basePrice
   }
 
   return (
@@ -460,7 +441,7 @@ export default function ContractForm({ onSubmit }) {
             </div>
           </div>
 
-          {/* NEU: Zusatzprodukte */}
+          {/* WICHTIG: Zusatzprodukte - Hier werden die Erläuterungen angeboten */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               📋 Zusatzprodukte
@@ -479,14 +460,17 @@ export default function ContractForm({ onSubmit }) {
                   <label className="text-sm font-medium text-gray-700 flex items-center">
                     Rechtliche Erläuterungen und Hinweise hinzufügen 
                     <span className="line-through text-gray-500 ml-1">(+4,90 €)</span>
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded ml-2">KOSTENLOS im Testzeitraum</span>
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded ml-2">🎉 KOSTENLOS im Testzeitraum!</span>
                     <Tooltip text="Umfassende Erläuterungen zur rechtlichen Einordnung, Mieterhöhungen, E-Mobilität, Kautionsregelung und Umsatzsteuer">
                       <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
                     </Tooltip>
                   </label>
                   <p className="text-xs text-gray-600 mt-1">
-                    Detaillierte Erklärungen zu: Rechtlicher Einordnung • Mieterhöhungsverfahren • 
+                    ✅ Detaillierte Erklärungen zu: Rechtlicher Einordnung • Mieterhöhungsverfahren • 
                     E-Fahrzeuge & Ladeinfrastruktur • Kautionsregelung • Umsatzsteuerliche Behandlung
+                  </p>
+                  <p className="text-xs text-green-600 mt-1 font-semibold">
+                    💡 Im Testzeitraum komplett kostenlos statt regulär 4,90 €!
                   </p>
                 </div>
               </div>
@@ -517,11 +501,8 @@ export default function ContractForm({ onSubmit }) {
                   value={formData.tenant_firstname}
                   onChange={handleChange}
                   placeholder="z.B. Max"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.tenant_firstname ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                {errors.tenant_firstname && <p className="text-red-500 text-sm mt-1">{errors.tenant_firstname}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -533,11 +514,8 @@ export default function ContractForm({ onSubmit }) {
                   value={formData.tenant_lastname}
                   onChange={handleChange}
                   placeholder="z.B. Mustermann"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.tenant_lastname ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                {errors.tenant_lastname && <p className="text-red-500 text-sm mt-1">{errors.tenant_lastname}</p>}
               </div>
             </div>
             
@@ -551,11 +529,8 @@ export default function ContractForm({ onSubmit }) {
                 value={formData.tenant_address}
                 onChange={handleChange}
                 placeholder="z.B. Beispielstraße 42"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.tenant_address ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.tenant_address && <p className="text-red-500 text-sm mt-1">{errors.tenant_address}</p>}
             </div>
             
             <div className="grid grid-cols-3 gap-4 mt-4">
@@ -587,11 +562,8 @@ export default function ContractForm({ onSubmit }) {
                   value={formData.tenant_city}
                   onChange={handleChange}
                   placeholder="z.B. Berlin"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.tenant_city ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                {errors.tenant_city && <p className="text-red-500 text-sm mt-1">{errors.tenant_city}</p>}
               </div>
             </div>
           </div>
@@ -612,11 +584,8 @@ export default function ContractForm({ onSubmit }) {
                   name="lease_start"
                   value={formData.lease_start}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.lease_start ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                {errors.lease_start && <p className="text-red-500 text-sm mt-1">{errors.lease_start}</p>}
               </div>
               
               {formData.garage_lease_type === 'befristet' && (
@@ -738,7 +707,7 @@ export default function ContractForm({ onSubmit }) {
             </div>
           </div>
 
-          {/* Bankdaten - OPTIONAL mit Beispielen */}
+          {/* Bankdaten - OPTIONAL */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               🏦 Bankdaten des Vermieters
@@ -775,20 +744,17 @@ export default function ContractForm({ onSubmit }) {
                   value={formData.bank}
                   onChange={handleChange}
                   placeholder="Beispiel: Muster Bank"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${
-                    errors.bank ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                 />
-                {errors.bank && <p className="text-red-500 text-sm mt-1">{errors.bank}</p>}
               </div>
             </div>
           </div>
 
-          {/* NEU: Preisübersicht für Testzeitraum */}
+          {/* TESTZEITRAUM: Preisübersicht */}
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              🎉 Testzeitraum - Kostenlos!
-              <span className="ml-2 text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full">Aktuelle Aktion</span>
+              🎉 Testzeitraum - Alles kostenlos!
+              <span className="ml-2 text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full">Befristet</span>
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center text-sm">
@@ -797,18 +763,24 @@ export default function ContractForm({ onSubmit }) {
               </div>
               {formData.include_explanations && (
                 <div className="flex justify-between items-center text-sm">
-                  <span>Rechtliche Erläuterungen:</span>
+                  <span>+ Rechtliche Erläuterungen:</span>
                   <span className="line-through text-gray-500">4,90 €</span>
                 </div>
               )}
               <hr className="border-orange-200" />
               <div className="flex justify-between items-center font-semibold text-lg">
-                <span>Gesamtpreis (Testzeitraum):</span>
-                <span className="text-green-600">0,00 € (KOSTENLOS)</span>
+                <span>Ihr Preis (Testzeitraum):</span>
+                <span className="text-green-600">0,00 € (KOSTENLOS) 🎉</span>
               </div>
               <p className="text-xs text-gray-600">
-                * Regulärer Preis nach Testzeitraum: {getPrice().toFixed(2)} €
+                * Nach dem Testzeitraum: {formData.include_explanations ? '12,80' : '7,90'} €
               </p>
+              <div className="bg-green-100 border border-green-300 rounded p-3 mt-3">
+                <p className="text-xs text-green-700 text-center font-medium">
+                  ✨ Profitieren Sie jetzt vom kostenlosen Testzeitraum - 
+                  alle Features ohne Einschränkungen! ✨
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -828,7 +800,7 @@ export default function ContractForm({ onSubmit }) {
           className="px-8 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors flex items-center"
         >
           <span className="mr-2">🎉</span>
-          Kostenlos erstellen & herunterladen
+          Kostenlos zur Vorschau
         </button>
       </div>
     </form>
