@@ -29,18 +29,6 @@ function WGUntermietvertragForm({ onSubmit }) {
     property_number: '',
     property_sqm: '',
     
-    // Räume der Wohnung (nur Checkboxen)
-    kitchen: true,
-    bathroom_toilet: true,
-    separate_bathroom: false,
-    separate_toilet: false,
-    hallway: true,
-    storage: false,
-    cellar: false,
-    attic: false,
-    balcony_terrace: false,
-    garden: false,
-    
     // Zimmer des Untermieters
     exclusive_room: '',
     
@@ -336,114 +324,7 @@ function WGUntermietvertragForm({ onSubmit }) {
               </div>
             </div>
 
-            {/* Räume der Wohnung - NUR Checkboxen */}
-            <div className="bg-white rounded-lg p-4 border">
-              <h4 className="font-medium text-gray-800 mb-3">Räume der gesamten Wohnung</h4>
-              <p className="text-sm text-gray-600 mb-4">Welche Räume gibt es in der Wohnung?</p>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="kitchen"
-                    checked={formData.kitchen}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Küche</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="bathroom_toilet"
-                    checked={formData.bathroom_toilet}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Bad mit Toilette</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="separate_bathroom"
-                    checked={formData.separate_bathroom}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Separates Bad</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="separate_toilet"
-                    checked={formData.separate_toilet}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Separate Toilette</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="hallway"
-                    checked={formData.hallway}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Flur/Diele</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="storage"
-                    checked={formData.storage}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Abstellkammer</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="cellar"
-                    checked={formData.cellar}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Keller</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="attic"
-                    checked={formData.attic}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Dachboden</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="balcony_terrace"
-                    checked={formData.balcony_terrace}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Balkon/Terrasse</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="garden"
-                    checked={formData.garden}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">Gartenanteil</label>
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
 
