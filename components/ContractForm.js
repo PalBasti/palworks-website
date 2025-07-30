@@ -222,226 +222,6 @@ export default function ContractForm({ onSubmit }) {
                   value={formData.garage_type}
                   onChange={handleChange}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.lease_start ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.lease_start && <p className="text-red-500 text-sm mt-1">{errors.lease_start}</p>}
-              </div>
-              
-              {formData.garage_lease_type === 'befristet' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mietende
-                  </label>
-                  <input
-                    type="date"
-                    name="lease_end"
-                    value={formData.lease_end}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.lease_end ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.lease_end && <p className="text-red-500 text-sm mt-1">{errors.lease_end}</p>}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Finanzen - OPTIONAL */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              💰 Miete & Finanzen
-              <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Optional</span>
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                  Grundmiete (€)
-                  <Tooltip text="Die monatliche Grundmiete ohne Nebenkosten">
-                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
-                  </Tooltip>
-                </label>
-                <input
-                  type="number"
-                  name="rent"
-                  value={formData.rent}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="z.B. 50.00"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.rent ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.rent && <p className="text-red-500 text-sm mt-1">{errors.rent}</p>}
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="has_utilities"
-                  checked={formData.has_utilities}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="ml-2 text-sm text-gray-700 flex items-center">
-                  Betriebskosten getrennt ausweisen
-                  <Tooltip text="z.B. Strom für Beleuchtung, Reinigung, Wartung der Garage">
-                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
-                  </Tooltip>
-                </label>
-              </div>
-              
-              {formData.has_utilities && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Betriebskosten-Vorauszahlung (€)
-                  </label>
-                  <input
-                    type="number"
-                    name="utilities"
-                    value={formData.utilities}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    placeholder="z.B. 15.00"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="has_deposit"
-                  checked={formData.has_deposit}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="ml-2 text-sm text-gray-700 flex items-center">
-                  Kaution vereinbaren
-                  <Tooltip text="Sicherheitsleistung, meist 1-3 Monatsmieten. Bei Garagen/Stellplätzen keine gesetzliche Begrenzung.">
-                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
-                  </Tooltip>
-                </label>
-              </div>
-              
-              {formData.has_deposit && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kautionsbetrag (€)
-                  </label>
-                  <input
-                    type="number"
-                    name="deposit"
-                    value={formData.deposit}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    placeholder="z.B. 100.00"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bankdaten - OPTIONAL mit Beispielen */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              🏦 Bankdaten des Vermieters
-              <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Optional</span>
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                  IBAN
-                  <Tooltip text="Internationale Bankkontonummer für Mietzahlungen. Format: DE + 2 Prüfziffern + 8 Bankleitzahl + 10 Kontonummer">
-                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
-                  </Tooltip>
-                </label>
-                <input
-                  type="text"
-                  name="iban"
-                  value={formData.iban}
-                  onChange={handleChange}
-                  placeholder="Beispiel: DE12 1234 5678 9012 3456 78"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${
-                    errors.iban ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.iban && <p className="text-red-500 text-sm mt-1">{errors.iban}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bank-Name
-                </label>
-                <input
-                  type="text"
-                  name="bank"
-                  value={formData.bank}
-                  onChange={handleChange}
-                  placeholder="Beispiel: Muster Bank"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${
-                    errors.bank ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.bank && <p className="text-red-500 text-sm mt-1">{errors.bank}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* NEU: Preisübersicht für Testzeitraum */}
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              🎉 Testzeitraum - Kostenlos!
-              <span className="ml-2 text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full">Aktuelle Aktion</span>
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span>Garage/Stellplatz Mietvertrag:</span>
-                <span className="line-through text-gray-500">7,90 €</span>
-              </div>
-              {formData.include_explanations && (
-                <div className="flex justify-between items-center text-sm">
-                  <span>Rechtliche Erläuterungen:</span>
-                  <span className="line-through text-gray-500">4,90 €</span>
-                </div>
-              )}
-              <hr className="border-orange-200" />
-              <div className="flex justify-between items-center font-semibold text-lg">
-                <span>Gesamtpreis (Testzeitraum):</span>
-                <span className="text-green-600">0,00 € (KOSTENLOS)</span>
-              </div>
-              <p className="text-xs text-gray-600">
-                * Regulärer Preis nach Testzeitraum: {getPrice().toFixed(2)} €
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-center space-x-4 mt-8 pt-6 border-t">
-        <button
-          type="button"
-          onClick={resetForm}
-          className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-        >
-          Zurücksetzen
-        </button>
-        <button
-          type="submit"
-          className="px-8 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors flex items-center"
-        >
-          <span className="mr-2">🎉</span>
-          Kostenlos erstellen & herunterladen
-        </button>
-      </div>
-    </form>
-  )w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.garage_type ? 'border-red-500' : 'border-gray-300'
                   }`}
                 >
@@ -832,4 +612,225 @@ export default function ContractForm({ onSubmit }) {
                   name="lease_start"
                   value={formData.lease_start}
                   onChange={handleChange}
-                  className={`
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.lease_start ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.lease_start && <p className="text-red-500 text-sm mt-1">{errors.lease_start}</p>}
+              </div>
+              
+              {formData.garage_lease_type === 'befristet' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mietende
+                  </label>
+                  <input
+                    type="date"
+                    name="lease_end"
+                    value={formData.lease_end}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.lease_end ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.lease_end && <p className="text-red-500 text-sm mt-1">{errors.lease_end}</p>}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Finanzen - OPTIONAL */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              💰 Miete & Finanzen
+              <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Optional</span>
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  Grundmiete (€)
+                  <Tooltip text="Die monatliche Grundmiete ohne Nebenkosten">
+                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
+                  </Tooltip>
+                </label>
+                <input
+                  type="number"
+                  name="rent"
+                  value={formData.rent}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="z.B. 50.00"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.rent ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.rent && <p className="text-red-500 text-sm mt-1">{errors.rent}</p>}
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="has_utilities"
+                  checked={formData.has_utilities}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 text-sm text-gray-700 flex items-center">
+                  Betriebskosten getrennt ausweisen
+                  <Tooltip text="z.B. Strom für Beleuchtung, Reinigung, Wartung der Garage">
+                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
+                  </Tooltip>
+                </label>
+              </div>
+              
+              {formData.has_utilities && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Betriebskosten-Vorauszahlung (€)
+                  </label>
+                  <input
+                    type="number"
+                    name="utilities"
+                    value={formData.utilities}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    placeholder="z.B. 15.00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="has_deposit"
+                  checked={formData.has_deposit}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 text-sm text-gray-700 flex items-center">
+                  Kaution vereinbaren
+                  <Tooltip text="Sicherheitsleistung, meist 1-3 Monatsmieten. Bei Garagen/Stellplätzen keine gesetzliche Begrenzung.">
+                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
+                  </Tooltip>
+                </label>
+              </div>
+              
+              {formData.has_deposit && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kautionsbetrag (€)
+                  </label>
+                  <input
+                    type="number"
+                    name="deposit"
+                    value={formData.deposit}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    placeholder="z.B. 100.00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bankdaten - OPTIONAL mit Beispielen */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              🏦 Bankdaten des Vermieters
+              <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Optional</span>
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  IBAN
+                  <Tooltip text="Internationale Bankkontonummer für Mietzahlungen. Format: DE + 2 Prüfziffern + 8 Bankleitzahl + 10 Kontonummer">
+                    <HelpCircle className="h-4 w-4 ml-2 text-gray-400 cursor-help" />
+                  </Tooltip>
+                </label>
+                <input
+                  type="text"
+                  name="iban"
+                  value={formData.iban}
+                  onChange={handleChange}
+                  placeholder="Beispiel: DE12 1234 5678 9012 3456 78"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${
+                    errors.iban ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.iban && <p className="text-red-500 text-sm mt-1">{errors.iban}</p>}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bank-Name
+                </label>
+                <input
+                  type="text"
+                  name="bank"
+                  value={formData.bank}
+                  onChange={handleChange}
+                  placeholder="Beispiel: Muster Bank"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${
+                    errors.bank ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.bank && <p className="text-red-500 text-sm mt-1">{errors.bank}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* NEU: Preisübersicht für Testzeitraum */}
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              🎉 Testzeitraum - Kostenlos!
+              <span className="ml-2 text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full">Aktuelle Aktion</span>
+            </h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span>Garage/Stellplatz Mietvertrag:</span>
+                <span className="line-through text-gray-500">7,90 €</span>
+              </div>
+              {formData.include_explanations && (
+                <div className="flex justify-between items-center text-sm">
+                  <span>Rechtliche Erläuterungen:</span>
+                  <span className="line-through text-gray-500">4,90 €</span>
+                </div>
+              )}
+              <hr className="border-orange-200" />
+              <div className="flex justify-between items-center font-semibold text-lg">
+                <span>Gesamtpreis (Testzeitraum):</span>
+                <span className="text-green-600">0,00 € (KOSTENLOS)</span>
+              </div>
+              <p className="text-xs text-gray-600">
+                * Regulärer Preis nach Testzeitraum: {getPrice().toFixed(2)} €
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-center space-x-4 mt-8 pt-6 border-t">
+        <button
+          type="button"
+          onClick={resetForm}
+          className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+        >
+          Zurücksetzen
+        </button>
+        <button
+          type="submit"
+          className="px-8 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors flex items-center"
+        >
+          <span className="mr-2">🎉</span>
+          Kostenlos erstellen & herunterladen
+        </button>
+      </div>
+    </form>
+  )
+}
