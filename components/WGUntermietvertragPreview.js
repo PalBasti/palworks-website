@@ -1,4 +1,7 @@
-export default function WGUntermietvertragPreview({ data }) {
+import { Check } from 'lucide-react'
+
+// Vorschau Komponente
+function WGUntermietvertragPreview({ data }) {
   if (!data) {
     return (
       <div className="bg-white border rounded-lg p-8 text-center">
@@ -20,24 +23,6 @@ export default function WGUntermietvertragPreview({ data }) {
     return value && value.toString().trim() !== '' ? value : placeholder
   }
 
-  const getRoomsList = () => {
-    const rooms = []
-    if (data.rooms_total) rooms.push(`${data.rooms_total} Zimmer`)
-    if (data.rooms_living) rooms.push(`${data.rooms_living} Wohnzimmer`)
-    if (data.kitchen) rooms.push('Küche')
-    if (data.bathroom_toilet) rooms.push('Bad mit Toilette')
-    if (data.separate_bathroom) rooms.push('separates Bad')
-    if (data.separate_toilet) rooms.push('separate Toilette')
-    if (data.hallway) rooms.push('Diele')
-    if (data.storage) rooms.push(`${data.storage} Abstellkammer(n)`)
-    if (data.cellar_number) rooms.push(`Keller(anteil) Nr.: ${data.cellar_number}`)
-    if (data.attic_number) rooms.push(`Speicher(anteil) Nr.: ${data.attic_number}`)
-    if (data.balcony_terrace) rooms.push('Balkon/Terrasse')
-    if (data.garden) rooms.push('Gartenanteil')
-    
-    return rooms.length > 0 ? rooms.join(', ') : '[Raumaufteilung]'
-  }
-
   const getSharedRooms = () => {
     const shared = []
     if (data.shared_living) shared.push('Wohnzimmer')
@@ -46,6 +31,7 @@ export default function WGUntermietvertragPreview({ data }) {
     if (data.shared_hallway) shared.push('Diele')
     if (data.shared_balcony) shared.push('Balkon/Terrasse')
     if (data.shared_cellar) shared.push('Keller(anteil)')
+    if (data.shared_attic) shared.push('Dachboden')
     if (data.shared_garden) shared.push('Gartenanteil')
     
     return shared.length > 0 ? shared.join(', ') : 'keine'
@@ -97,11 +83,6 @@ export default function WGUntermietvertragPreview({ data }) {
             {data.property_floor && <p>Geschoss: {data.property_floor}</p>}
             {data.property_number && <p>Whg-Nr.: {data.property_number}</p>}
             {data.property_sqm && <p>Quadratmeter: {data.property_sqm}</p>}
-          </div>
-          
-          <p className="mb-2">bestehend aus den folgenden Räumen und Flächen:</p>
-          <div className="ml-4 mb-4">
-            <p>{getRoomsList()}</p>
           </div>
           
           <p className="mb-2">
@@ -244,3 +225,5 @@ export default function WGUntermietvertragPreview({ data }) {
     </div>
   )
 }
+
+export default WGUntermietvertragPreview
