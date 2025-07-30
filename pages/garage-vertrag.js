@@ -32,8 +32,9 @@ export default function GarageVertrag() {
         timestamp: new Date().toISOString(),
         version: 'test-period',
         regularPrice: contractData.include_explanations ? 12.80 : 7.90,
-        actualPrice: 0.00, // Testzeitraum
-        contractType: 'garage-stellplatz'
+        actualPrice: 0.00, // Testzeitraum - KOMPLETT KOSTENLOS
+        contractType: 'garage-stellplatz',
+        testPeriodActive: true // Testzeitraum-Flag
       }
       
       // Simulation des PDF-Downloads (in Produktion wäre das eine echte PDF)
