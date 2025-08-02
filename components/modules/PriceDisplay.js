@@ -1,4 +1,4 @@
-// components/modules/PriceDisplay.js - VERBESSERTE VERSION
+// components/modules/PriceDisplay.js - KORRIGIERTE LANGFRISTIGE VERSION
 import { useState, useEffect } from 'react';
 import { Check, Plus, FileText, HelpCircle } from 'lucide-react';
 
@@ -12,16 +12,24 @@ export default function PriceDisplay({
 }) {
   const [isLoading, setIsLoading] = useState(false);
 
-  // DIY-fokussierte Addons - keine juristische Prüfung
-  const diyAddons = addons.filter(addon => 
-    addon.id !== 'legal_review' && 
-    addon.addon_key !== 'legal_review'
-  );
+  // ✅ KORRIGIERT: Flexiblere Addon-Filterung für alle Vertragstypen
+  const availableAddons = addons.filter(addon => {
+    // Nur aktive Addons anzeigen (falls is_active Feld vorhanden)
+    if (addon.hasOwnProperty('is_active') && !addon.is_active) {
+      return false;
+    }
+    
+    // Explizit ausgeschlossene Addons (optional, für spezielle Cases)
+    const excludeKeys = ['hidden', 'disabled', 'admin_only'];
+    const addonKey = addon.addon_key || addon.id;
+    
+    return !excludeKeys.includes(addonKey);
+  });
 
   // Gesamtpreis berechnen
   const calculateTotal = () => {
     const addonTotal = selectedAddons.reduce((sum, addonId) => {
-      const addon = diyAddons.find(a => a.id === addonId || a.addon_key === addonId);
+      const addon = availableAddons.find(a => a.id === addonId || a.addon_key === addonId);
       return sum + (addon?.price || 0);
     }, 0);
     
@@ -52,7 +60,7 @@ export default function PriceDisplay({
           </div>
           
           {selectedAddons.length > 0 && selectedAddons.map(addonId => {
-            const addon = diyAddons.find(a => a.id === addonId || a.addon_key === addonId);
+            const addon = availableAddons.find(a => a.id === addonId || a.addon_key === addonId);
             return addon ? (
               <div key={addonId} className="flex justify-between text-blue-600">
                 <span className="flex items-center">
@@ -97,16 +105,16 @@ export default function PriceDisplay({
           </div>
         </div>
 
-        {/* DIY-Addons */}
-        {diyAddons.length > 0 && (
+        {/* ✅ KORRIGIERT: Verfügbare Addons (nicht mehr "DIY-Addons") */}
+        {availableAddons.length > 0 && (
           <div className="mb-6">
             <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-              📋 DIY-Zusatzleistungen
-              <HelpCircle className="h-4 w-4 ml-2 text-gray-400" title="Perfekt für Do-it-yourself Nutzer" />
+              📋 Zusatzleistungen
+              <HelpCircle className="h-4 w-4 ml-2 text-gray-400" title="Optionale Erweiterungen für Ihren Vertrag" />
             </h4>
             
             <div className="space-y-3">
-              {diyAddons.map((addon) => {
+              {availableAddons.map((addon) => {
                 const addonId = addon.id || addon.addon_key;
                 const isSelected = selectedAddons.includes(addonId);
                 
@@ -138,7 +146,9 @@ export default function PriceDisplay({
                         <div className="flex-1">
                           <h5 className="font-medium text-gray-900 flex items-center">
                             {addon.name}
-                            {addon.id === 'protocol' && (
+                            {/* ✅ KORRIGIERT: Flexiblere Icon-Zuordnung */}
+                            {(addon.addon_key === 'protocol' || addon.id === 'protocol' || 
+                              addon.name.toLowerCase().includes('protokoll')) && (
                               <FileText className="h-4 w-4 ml-2 text-blue-600" />
                             )}
                           </h5>
@@ -148,16 +158,31 @@ export default function PriceDisplay({
                             </p>
                           )}
                           
-                          {/* Features anzeigen */}
-                          {addon.features && addon.features.length > 0 && (
+                          {/* ✅ KORRIGIERT: Flexiblere Features-Darstellung */}
+                          {addon.features && (
                             <div className="mt-2">
                               <ul className="text-xs text-gray-500 space-y-1">
-                                {addon.features.map((feature, index) => (
-                                  <li key={index} className="flex items-center">
-                                    <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                                    {feature}
-                                  </li>
-                                ))}
+                                {Array.isArray(addon.features) 
+                                  ? addon.features.map((feature, index) => (
+                                      <li key={index} className="flex items-center">
+                                        <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+                                        {feature}
+                                      </li>
+                                    ))
+                                  : typeof addon.features === 'object'
+                                  ? Object.entries(addon.features).map(([key, value], index) => (
+                                      <li key={index} className="flex items-center">
+                                        <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+                                        {key}: {value}
+                                      </li>
+                                    ))
+                                  : (
+                                      <li className="flex items-center">
+                                        <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+                                        {addon.features}
+                                      </li>
+                                    )
+                                }
                               </ul>
                             </div>
                           )}
@@ -193,7 +218,7 @@ export default function PriceDisplay({
                 <span>{basePrice.toFixed(2)} €</span>
               </div>
               {selectedAddons.map(addonId => {
-                const addon = diyAddons.find(a => a.id === addonId || a.addon_key === addonId);
+                const addon = availableAddons.find(a => a.id === addonId || a.addon_key === addonId);
                 return addon ? (
                   <div key={addonId} className="flex justify-between text-blue-600">
                     <span className="flex items-center">
@@ -208,11 +233,11 @@ export default function PriceDisplay({
           )}
         </div>
 
-        {/* DIY-Hinweis */}
+        {/* ✅ KORRIGIERT: Allgemeinerer Hinweis */}
         <div className="mt-4 p-3 bg-green-50 rounded-lg text-sm text-green-800">
           <p className="flex items-center">
             <span className="mr-2">🎯</span>
-            DIY-Paket: Alle Preise inkl. MwSt. • Sofortiger PDF-Download • Rechtssicher
+            Alle Preise inkl. MwSt. • Sofortiger PDF-Download • Rechtssicher
           </p>
         </div>
       </div>
