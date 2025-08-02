@@ -1,4 +1,4 @@
-// components/UntermietvertragForm.js - KOMPLETTE VERBESSERTE VERSION
+// components/UntermietvertragForm.js - KORRIGIERTE VERSION
 import { useState, useEffect } from 'react'
 import { HelpCircle, FileText, Check, Plus, Mail } from 'lucide-react'
 // ✅ VERBESSERTE IMPORTS
@@ -270,7 +270,7 @@ export default function UntermietvertragForm({ onSubmit }) {
                 />
               </div>
               
-              {/* Vertragsparteien - UNVERÄNDERT */}
+              {/* Vertragsparteien */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   👥 Vertragsparteien
@@ -290,6 +290,89 @@ export default function UntermietvertragForm({ onSubmit }) {
                           value={formData.landlord_name}
                           onChange={handleChange}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.landlord_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Max Mustermann"
+                        />
+                        {errors.landlord_name && <p className="text-red-500 text-sm mt-1">{errors.landlord_name}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Vollständige Anschrift <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          name="landlord_address"
+                          value={formData.landlord_address}
+                          onChange={handleChange}
+                          rows={3}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.landlord_address ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Musterstraße 12&#10;12345 Musterstadt"
+                        />
+                        {errors.landlord_address && <p className="text-red-500 text-sm mt-1">{errors.landlord_address}</p>}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-3">Untermieter</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Vollständiger Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="tenant_name"
+                          value={formData.tenant_name}
+                          onChange={handleChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.tenant_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Lisa Beispiel"
+                        />
+                        {errors.tenant_name && <p className="text-red-500 text-sm mt-1">{errors.tenant_name}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Vollständige Anschrift <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          name="tenant_address"
+                          value={formData.tenant_address}
+                          onChange={handleChange}
+                          rows={3}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.tenant_address ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Beispielweg 34&#10;54321 Beispielort"
+                        />
+                        {errors.tenant_address && <p className="text-red-500 text-sm mt-1">{errors.tenant_address}</p>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mietobjekt */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  🏠 Mietobjekt
+                  <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Verpflichtend</span>
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Straße und Hausnummer <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="property_address"
+                        value={formData.property_address}
+                        onChange={handleChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           errors.property_address ? 'border-red-500' : 'border-gray-300'
                         }`}
                         placeholder="Wohnstraße 15"
@@ -630,87 +713,4 @@ export default function UntermietvertragForm({ onSubmit }) {
       </div>
     </div>
   )
-}ring-blue-500 ${
-                            errors.landlord_name ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Max Mustermann"
-                        />
-                        {errors.landlord_name && <p className="text-red-500 text-sm mt-1">{errors.landlord_name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständige Anschrift <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          name="landlord_address"
-                          value={formData.landlord_address}
-                          onChange={handleChange}
-                          rows={3}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.landlord_address ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Musterstraße 12&#10;12345 Musterstadt"
-                        />
-                        {errors.landlord_address && <p className="text-red-500 text-sm mt-1">{errors.landlord_address}</p>}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-800 mb-3">Untermieter</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständiger Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="tenant_name"
-                          value={formData.tenant_name}
-                          onChange={handleChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.tenant_name ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Lisa Beispiel"
-                        />
-                        {errors.tenant_name && <p className="text-red-500 text-sm mt-1">{errors.tenant_name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständige Anschrift <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          name="tenant_address"
-                          value={formData.tenant_address}
-                          onChange={handleChange}
-                          rows={3}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.tenant_address ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Beispielweg 34&#10;54321 Beispielort"
-                        />
-                        {errors.tenant_address && <p className="text-red-500 text-sm mt-1">{errors.tenant_address}</p>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Mietobjekt - UNVERÄNDERT */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  🏠 Mietobjekt
-                  <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Verpflichtend</span>
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Straße und Hausnummer <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="property_address"
-                        value={formData.property_address}
-                        onChange={handleChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:
+}
