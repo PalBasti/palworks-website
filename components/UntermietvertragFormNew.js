@@ -158,21 +158,22 @@ export default function UntermietvertragFormNew({ onSubmit }) {
     })
   }
 
-  // ✅ EMAIL-HANDLER für EmailCollection
+  // ✅ EMAIL-HANDLER für EmailCollection - vereinfacht
   const handleEmailSubmit = async (email, wantsNewsletter = false) => {
-    try {
-      setCustomerEmail(email)
-      setNewsletterSignup(wantsNewsletter)
-      
-      if (wantsNewsletter) {
+    // E-Mail sofort speichern ohne Bestätigung
+    setCustomerEmail(email)
+    setNewsletterSignup(wantsNewsletter)
+    
+    // Newsletter optional im Hintergrund
+    if (wantsNewsletter) {
+      try {
         await subscribeToNewsletter(email, 'contract_form', 'untermietvertrag')
+      } catch (error) {
+        console.log('Newsletter-Anmeldung optional fehlgeschlagen:', error)
       }
-      
-      return Promise.resolve()
-    } catch (error) {
-      console.error('E-Mail-Verarbeitung fehlgeschlagen:', error)
-      throw new Error('E-Mail konnte nicht verarbeitet werden')
     }
+    
+    return Promise.resolve()
   }
 
   // ✅ BEWÄHRTE VALIDIERUNG aus Live-Version
@@ -258,17 +259,49 @@ export default function UntermietvertragFormNew({ onSubmit }) {
 
             <form onSubmit={handleSubmit} className="space-y-8">
               
-              {/* ✅ NEUE E-MAIL-SEKTION mit EmailCollection */}
+              {/* ✅ VEREINFACHTE E-MAIL-SEKTION */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <EmailCollection
-                  title="📧 E-Mail für Vertragszustellung"
-                  description="Ihr fertiger Vertrag wird an diese Adresse gesendet"
-                  onEmailSubmit={handleEmailSubmit}
-                  variant="inline"
-                  showPrivacyNote={true}
-                  showNewsletterOption={true}
-                  required={true}
-                />
+                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                  <Mail className="h-5 w-5 mr-2 text-blue-600" />
+                  📧 E-Mail für Vertragszustellung
+                </h3>
+                <p className="text-gray-600 mb-4">Ihr fertiger Vertrag wird an diese Adresse gesendet</p>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      E-Mail-Adresse <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="ihre@email.de"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="newsletter"
+                      checked={newsletterSignup}
+                      onChange={(e) => setNewsletterSignup(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="newsletter" className="ml-2 text-sm text-gray-700">
+                      Newsletter abonnieren (optional) - Updates zu neuen Vertragsvorlagen
+                    </label>
+                  </div>
+                  
+                  {customerEmail && (
+                    <div className="flex items-center text-green-600 text-sm">
+                      <Check className="h-4 w-4 mr-2" />
+                      E-Mail gespeichert: {customerEmail}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {/* ✅ ALLE BESTEHENDEN SEKTIONEN aus Live-Version UNVERÄNDERT */}
@@ -698,19 +731,6 @@ export default function UntermietvertragFormNew({ onSubmit }) {
               </div>
             </div>
           )}
-
-          {/* DIY-Vorteile */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-3">
-              🎯 DIY-Vorteile:
-            </h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Keine Anwaltskosten (spart 200-500€)</li>
-              <li>• Sofort verfügbar</li>
-              <li>• Rechtssicher</li>
-              <li>• Mehrfach verwendbar</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
