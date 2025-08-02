@@ -1,4 +1,4 @@
-// components/UntermietvertragFormNew.js - VOLLSTÄNDIGE INTEGRATION MIT ECHTEN MODULEN
+// components/UntermietvertragForm.js - FINALE VERSION MIT KORRIGIERTER PRICEISPLAY
 import { useState, useEffect } from 'react'
 import { Check, Mail } from 'lucide-react'
 
@@ -25,7 +25,7 @@ const getContractAddons = async (contractType) => {
     return await realService(contractType)
   } catch (error) {
     console.log('Addons service fallback for:', contractType)
-    // Fallback-Addons basierend auf aktueller Live-Version
+    // ✅ KORRIGIERT: Nur ein Übergabeprotokoll in Fallback-Addons
     return [
       {
         id: 'protocol',
@@ -39,25 +39,12 @@ const getContractAddons = async (contractType) => {
           'Schlüsselübergabe-Dokumentation',
           'Zählerstände & Ausstattung'
         ]
-      },
-      {
-        id: 'explanation',
-        addon_key: 'explanation',
-        name: 'Rechtliche Erläuterungen',
-        price: 9.99,
-        description: 'Detaillierte Erklärungen zu allen Vertragsklauseln in verständlicher Sprache',
-        features: [
-          'Alle Paragrafen erklärt',
-          'Rechtliche Hintergründe',
-          'Praktische Tipps',
-          'Sofortiger PDF-Download'
-        ]
       }
     ]
   }
 }
 
-export default function UntermietvertragFormNew({ onSubmit }) {
+export default function UntermietvertragForm({ onSubmit }) {
   // ✅ BEWÄHRTE FORM-STRUKTUR aus Live-Version beibehalten
   const [formData, setFormData] = useState({
     // Parteien
@@ -138,24 +125,6 @@ export default function UntermietvertragFormNew({ onSubmit }) {
     })
   }
 
-  // ✅ EMAIL-HANDLER für EmailCollection - vereinfacht
-  const handleEmailSubmit = async (email, wantsNewsletter = false) => {
-    // E-Mail sofort speichern ohne Bestätigung
-    setCustomerEmail(email)
-    setNewsletterSignup(wantsNewsletter)
-    
-    // Newsletter optional im Hintergrund
-    if (wantsNewsletter) {
-      try {
-        await subscribeToNewsletter(email, 'contract_form', 'untermietvertrag')
-      } catch (error) {
-        console.log('Newsletter-Anmeldung optional fehlgeschlagen:', error)
-      }
-    }
-    
-    return Promise.resolve()
-  }
-
   // ✅ BEWÄHRTE VALIDIERUNG aus Live-Version
   const validateForm = () => {
     const newErrors = {}
@@ -207,7 +176,6 @@ export default function UntermietvertragFormNew({ onSubmit }) {
 
   // ✅ PREISFUNKTIONEN - kompatibel mit Live-Version
   const getBasePrice = () => 12.90
-  const getProtocolPrice = () => 4.90
   
   const getTotalPrice = () => {
     let total = getBasePrice()
@@ -677,7 +645,7 @@ export default function UntermietvertragFormNew({ onSubmit }) {
           </div>
         </div>
 
-        {/* ✅ NEUE SIDEBAR mit PriceDisplay-Modul */}
+        {/* ✅ NEUE SIDEBAR mit korrigierter PriceDisplay */}
         <div className="lg:col-span-1 space-y-6">
           <PriceDisplay
             basePrice={getBasePrice()}
