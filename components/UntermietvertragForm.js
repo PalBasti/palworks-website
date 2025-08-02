@@ -57,7 +57,7 @@ const getContractAddons = async (contractType) => {
   }
 }
 
-export default function UntermietvertragFormNew({ onSubmit }) {
+export default function UntermietvertragForm({ onSubmit }) {
   // ✅ BEWÄHRTE FORM-STRUKTUR aus Live-Version beibehalten
   const [formData, setFormData] = useState({
     // Parteien
