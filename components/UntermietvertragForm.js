@@ -1,4 +1,4 @@
-// components/UntermietvertragForm.js - VOLLSTÄNDIGE INTEGRATION MIT ECHTEN MODULEN
+// components/UntermietvertragFormNew.js - VOLLSTÄNDIGE INTEGRATION MIT ECHTEN MODULEN
 import { useState, useEffect } from 'react'
 import { Check, Mail } from 'lucide-react'
 
@@ -57,7 +57,7 @@ const getContractAddons = async (contractType) => {
   }
 }
 
-export default function UntermietvertragForm({ onSubmit }) {
+export default function UntermietvertragFormNew({ onSubmit }) {
   // ✅ BEWÄHRTE FORM-STRUKTUR aus Live-Version beibehalten
   const [formData, setFormData] = useState({
     // Parteien
@@ -87,10 +87,9 @@ export default function UntermietvertragForm({ onSubmit }) {
     
     // Ausstattung
     furnished: 'unfurnished',
-    equipment_list: '',
+    equipment_list: ''
     
-    // ✅ RÜCKWÄRTSKOMPATIBILITÄT mit Live-Version
-    include_protocol: false
+    // ✅ include_protocol ENTFERNT - nur selectedAddons wird verwendet
   })
 
   const [errors, setErrors] = useState({})
@@ -114,25 +113,6 @@ export default function UntermietvertragForm({ onSubmit }) {
     }
     loadAddons()
   }, [])
-
-  // ✅ BIDIREKTIONALE SYNCHRONISATION: formData.include_protocol ↔ selectedAddons
-  useEffect(() => {
-    const hasProtocol = selectedAddons.includes('protocol')
-    if (formData.include_protocol !== hasProtocol) {
-      setFormData(prev => ({
-        ...prev,
-        include_protocol: hasProtocol
-      }))
-    }
-  }, [selectedAddons])
-
-  useEffect(() => {
-    if (formData.include_protocol && !selectedAddons.includes('protocol')) {
-      setSelectedAddons(prev => [...prev, 'protocol'])
-    } else if (!formData.include_protocol && selectedAddons.includes('protocol')) {
-      setSelectedAddons(prev => prev.filter(id => id !== 'protocol'))
-    }
-  }, [formData.include_protocol])
 
   // ✅ BEWÄHRTE HANDLER aus Live-Version
   const handleChange = (e) => {
@@ -217,7 +197,9 @@ export default function UntermietvertragForm({ onSubmit }) {
         ...formData,
         selected_addons: selectedAddons,
         customer_email: customerEmail,
-        newsletter_signup: newsletterSignup
+        newsletter_signup: newsletterSignup,
+        // ✅ RÜCKWÄRTSKOMPATIBILITÄT: include_protocol aus selectedAddons ableiten
+        include_protocol: selectedAddons.includes('protocol')
       }
       onSubmit(extendedData)
     }
