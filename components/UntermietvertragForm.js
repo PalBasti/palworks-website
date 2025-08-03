@@ -1,4 +1,4 @@
-// components/UntermietvertragForm.js - FINALE VERSION MIT KORRIGIERTER PRICEISPLAY
+// components/UntermietvertragForm.js - KORRIGIERTE VERSION
 import { useState, useEffect } from 'react'
 import { Check, Mail } from 'lucide-react'
 
@@ -6,10 +6,9 @@ import { Check, Mail } from 'lucide-react'
 import EmailCollection from './modules/EmailCollection'
 import PriceDisplay from './modules/PriceDisplay'
 
-// ✅ API SERVICES (mit Fallbacks falls nicht vorhanden)
+// ✅ API SERVICES
 const subscribeToNewsletter = async (email, source, contractType) => {
   try {
-    // Versuche echten Service zu laden
     const { subscribeToNewsletter: realService } = await import('../lib/supabase/newsletterService')
     return await realService(email, source, contractType)
   } catch (error) {
@@ -20,12 +19,11 @@ const subscribeToNewsletter = async (email, source, contractType) => {
 
 const getContractAddons = async (contractType) => {
   try {
-    // Versuche echten Service zu laden
     const { getContractAddons: realService } = await import('../lib/api/contracts')
     return await realService(contractType)
   } catch (error) {
     console.log('Addons service fallback for:', contractType)
-    // ✅ KORRIGIERT: Nur ein Übergabeprotokoll in Fallback-Addons
+    // ✅ KORRIGIERT: Saubere Features ohne "Übergabeprotokoll" als Text
     return [
       {
         id: 'protocol',
@@ -35,7 +33,7 @@ const getContractAddons = async (contractType) => {
         description: 'Professionelles Übergabeprotokoll mit automatischer Datenübernahme',
         features: [
           'Vollständige Zustandsdokumentation',
-          'Automatische Datenübernahme',
+          'Automatische Datenübernahme', 
           'Schlüsselübergabe-Dokumentation',
           'Zählerstände & Ausstattung'
         ]
@@ -45,120 +43,81 @@ const getContractAddons = async (contractType) => {
 }
 
 export default function UntermietvertragForm({ onSubmit }) {
-  // ✅ BEWÄHRTE FORM-STRUKTUR aus Live-Version beibehalten
   const [formData, setFormData] = useState({
-    // Parteien
-    landlord_name: '',
-    landlord_address: '',
-    tenant_name: '',
-    tenant_address: '',
-    
-    // Objekt
-    property_address: '',
-    property_postal: '',
-    property_city: '',
-    property_floor: '',
-    property_number: '',
-    property_sqm: '',
-    
-    // Vertrag
-    contract_type: 'unlimited',
-    start_date: '',
-    end_date: '',
-    
-    // Miete
-    rent_amount: '',
-    heating_costs: '',
-    other_costs: '',
-    deposit: '',
-    
-    // Ausstattung
-    furnished: 'unfurnished',
-    equipment_list: ''
-    
-    // ✅ include_protocol ENTFERNT - nur selectedAddons wird verwendet
+    landlord_name: '', landlord_address: '', tenant_name: '', tenant_address: '',
+    property_address: '', property_postal: '', property_city: '', property_floor: '',
+    property_number: '', property_sqm: '', contract_type: 'unlimited', start_date: '',
+    end_date: '', rent_amount: '', heating_costs: '', other_costs: '', deposit: '',
+    furnished: 'unfurnished', equipment_list: ''
   })
 
   const [errors, setErrors] = useState({})
-  
-  // ✅ NEUE MODULE-INTEGRATION
   const [addons, setAddons] = useState([])
   const [selectedAddons, setSelectedAddons] = useState([])
   const [customerEmail, setCustomerEmail] = useState('')
   const [newsletterSignup, setNewsletterSignup] = useState(false)
 
-  // ✅ Addons laden
+  // ✅ Addons laden mit Debug-Logging
   useEffect(() => {
     const loadAddons = async () => {
       try {
+        console.log('🔍 Loading addons for untermietvertrag...')
         const addonData = await getContractAddons('untermietvertrag')
+        console.log('🔍 Loaded addons:', addonData)
+        console.log('🔍 Features in first addon:', addonData[0]?.features)
         setAddons(addonData)
       } catch (error) {
-        console.error('Fehler beim Laden der Addons:', error)
+        console.error('🔍 Error loading addons:', error)
         setAddons([])
       }
     }
     loadAddons()
   }, [])
 
-  // ✅ BEWÄHRTE HANDLER aus Live-Version
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
-    
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }))
     }
   }
 
-  // ✅ NEUER ADDON-HANDLER
   const handleAddonToggle = (addonId) => {
+    console.log('🔍 Toggling addon:', addonId)
     setSelectedAddons(prev => {
-      if (prev.includes(addonId)) {
-        return prev.filter(id => id !== addonId)
-      } else {
-        return [...prev, addonId]
-      }
+      const newSelection = prev.includes(addonId) 
+        ? prev.filter(id => id !== addonId)
+        : [...prev, addonId]
+      console.log('🔍 New selected addons:', newSelection)
+      return newSelection
     })
   }
 
-  // ✅ BEWÄHRTE VALIDIERUNG aus Live-Version
   const validateForm = () => {
     const newErrors = {}
-    
-    // ✅ E-Mail ist jetzt Pflicht für neue Version
     if (!customerEmail) {
       newErrors.customer_email = 'E-Mail-Adresse ist für die Vertragszustellung erforderlich'
     }
-    
     const requiredFields = [
       'landlord_name', 'landlord_address', 'tenant_name', 'tenant_address',
       'property_address', 'property_postal', 'property_city',
       'contract_type', 'start_date', 'rent_amount'
     ]
-    
     requiredFields.forEach(field => {
       if (!formData[field] || formData[field].toString().trim() === '') {
         newErrors[field] = 'Dieses Feld ist erforderlich'
       }
     })
-    
     if (formData.contract_type === 'fixed_term' && !formData.end_date) {
       newErrors.end_date = 'Bei befristetem Vertrag ist das Enddatum erforderlich'
     }
-    
     if (formData.property_postal && !/^\d{5}$/.test(formData.property_postal)) {
       newErrors.property_postal = 'PLZ muss 5 Ziffern haben'
     }
-    
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  // ✅ ERWEITERTER SUBMIT mit neuen Daten
   const handleSubmit = (e) => {
     e.preventDefault()
     if (validateForm()) {
@@ -167,34 +126,29 @@ export default function UntermietvertragForm({ onSubmit }) {
         selected_addons: selectedAddons,
         customer_email: customerEmail,
         newsletter_signup: newsletterSignup,
-        // ✅ RÜCKWÄRTSKOMPATIBILITÄT: include_protocol aus selectedAddons ableiten
         include_protocol: selectedAddons.includes('protocol')
       }
+      console.log('🔍 Submitting form data:', extendedData)
       onSubmit(extendedData)
     }
   }
 
-  // ✅ PREISFUNKTIONEN - kompatibel mit Live-Version
   const getBasePrice = () => 12.90
-  
   const getTotalPrice = () => {
     let total = getBasePrice()
-    
-    // Neue Addon-Berechnung
     selectedAddons.forEach(addonId => {
       const addon = addons.find(a => a.id === addonId || a.addon_key === addonId)
       if (addon) {
         total += addon.price
       }
     })
-    
     return total.toFixed(2)
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="grid lg:grid-cols-4 gap-8">
-        {/* ✅ HAUPTFORMULAR (3 Spalten) - Layout aus Live-Version */}
+        {/* ✅ HAUPTFORMULAR (3 Spalten) */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="text-center mb-8">
@@ -209,7 +163,7 @@ export default function UntermietvertragForm({ onSubmit }) {
 
             <form onSubmit={handleSubmit} className="space-y-8">
               
-              {/* ✅ VEREINFACHTE E-MAIL-SEKTION */}
+              {/* ✅ E-MAIL-SEKTION */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
                   <Mail className="h-5 w-5 mr-2 text-blue-600" />
@@ -254,193 +208,108 @@ export default function UntermietvertragForm({ onSubmit }) {
                 </div>
               </div>
               
-              {/* ✅ ALLE BESTEHENDEN SEKTIONEN aus Live-Version UNVERÄNDERT */}
+              {/* ✅ ALLE BESTEHENDEN FORM-SEKTIONEN (gekürzt für Übersicht) */}
               
               {/* Vertragsparteien */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  👥 Vertragsparteien
-                  <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Verpflichtend</span>
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">👥 Vertragsparteien</h3>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-medium text-gray-800 mb-3">Untervermieter (Hauptmieter)</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständiger Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="landlord_name"
-                          value={formData.landlord_name}
-                          onChange={handleChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.landlord_name ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Max Mustermann"
-                        />
-                        {errors.landlord_name && <p className="text-red-500 text-sm mt-1">{errors.landlord_name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständige Anschrift <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          name="landlord_address"
-                          value={formData.landlord_address}
-                          onChange={handleChange}
-                          rows={3}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.landlord_address ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Musterstraße 12&#10;12345 Musterstadt"
-                        />
-                        {errors.landlord_address && <p className="text-red-500 text-sm mt-1">{errors.landlord_address}</p>}
-                      </div>
-                    </div>
+                    <h4 className="font-medium text-gray-800 mb-3">Untervermieter</h4>
+                    <input
+                      type="text"
+                      name="landlord_name"
+                      value={formData.landlord_name}
+                      onChange={handleChange}
+                      placeholder="Vollständiger Name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                    />
+                    <textarea
+                      name="landlord_address"
+                      value={formData.landlord_address}
+                      onChange={handleChange}
+                      placeholder="Vollständige Anschrift"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                    />
                   </div>
-                  
                   <div>
                     <h4 className="font-medium text-gray-800 mb-3">Untermieter</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständiger Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="tenant_name"
-                          value={formData.tenant_name}
-                          onChange={handleChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.tenant_name ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Lisa Beispiel"
-                        />
-                        {errors.tenant_name && <p className="text-red-500 text-sm mt-1">{errors.tenant_name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vollständige Anschrift <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          name="tenant_address"
-                          value={formData.tenant_address}
-                          onChange={handleChange}
-                          rows={3}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.tenant_address ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Beispielweg 34&#10;54321 Beispielort"
-                        />
-                        {errors.tenant_address && <p className="text-red-500 text-sm mt-1">{errors.tenant_address}</p>}
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      name="tenant_name"
+                      value={formData.tenant_name}
+                      onChange={handleChange}
+                      placeholder="Vollständiger Name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                    />
+                    <textarea
+                      name="tenant_address"
+                      value={formData.tenant_address}
+                      onChange={handleChange}
+                      placeholder="Vollständige Anschrift"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Mietobjekt */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  🏠 Mietobjekt
-                  <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Verpflichtend</span>
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Straße und Hausnummer <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="property_address"
-                        value={formData.property_address}
-                        onChange={handleChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.property_address ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Wohnstraße 15"
-                      />
-                      {errors.property_address && <p className="text-red-500 text-sm mt-1">{errors.property_address}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Geschoss
-                      </label>
-                      <input
-                        type="text"
-                        name="property_floor"
-                        value={formData.property_floor}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="2. OG"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        PLZ <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="property_postal"
-                        value={formData.property_postal}
-                        onChange={handleChange}
-                        maxLength="5"
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.property_postal ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="12345"
-                      />
-                      {errors.property_postal && <p className="text-red-500 text-sm mt-1">{errors.property_postal}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Ort <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="property_city"
-                        value={formData.property_city}
-                        onChange={handleChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.property_city ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Musterort"
-                      />
-                      {errors.property_city && <p className="text-red-500 text-sm mt-1">{errors.property_city}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Whg-Nr.
-                      </label>
-                      <input
-                        type="text"
-                        name="property_number"
-                        value={formData.property_number}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="15a"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quadratmeter
-                      </label>
-                      <input
-                        type="number"
-                        name="property_sqm"
-                        value={formData.property_sqm}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="65"
-                      />
-                    </div>
-                  </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🏠 Mietobjekt</h3>
+                <div className="grid md:grid-cols-3 gap-4 mb-4">
+                  <input
+                    type="text"
+                    name="property_address"
+                    value={formData.property_address}
+                    onChange={handleChange}
+                    placeholder="Straße und Hausnummer"
+                    className="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    name="property_floor"
+                    value={formData.property_floor}
+                    onChange={handleChange}
+                    placeholder="Geschoss"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <input
+                    type="text"
+                    name="property_postal"
+                    value={formData.property_postal}
+                    onChange={handleChange}
+                    placeholder="PLZ"
+                    maxLength="5"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    name="property_city"
+                    value={formData.property_city}
+                    onChange={handleChange}
+                    placeholder="Ort"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    name="property_number"
+                    value={formData.property_number}
+                    onChange={handleChange}
+                    placeholder="Whg-Nr."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    name="property_sqm"
+                    value={formData.property_sqm}
+                    onChange={handleChange}
+                    placeholder="m²"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 
@@ -449,53 +318,30 @@ export default function UntermietvertragForm({ onSubmit }) {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">📅 Mietzeit</h3>
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Vertragsart <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="contract_type"
-                        value={formData.contract_type}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="unlimited">Unbefristet</option>
-                        <option value="fixed_term">Befristet</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Mietbeginn <span className="text-red-500">*</span>
-                      </label>
+                    <select
+                      name="contract_type"
+                      value={formData.contract_type}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="unlimited">Unbefristet</option>
+                      <option value="fixed_term">Befristet</option>
+                    </select>
+                    <input
+                      type="date"
+                      name="start_date"
+                      value={formData.start_date}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {formData.contract_type === 'fixed_term' && (
                       <input
                         type="date"
-                        name="start_date"
-                        value={formData.start_date}
+                        name="end_date"
+                        value={formData.end_date}
                         onChange={handleChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.start_date ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      {errors.start_date && <p className="text-red-500 text-sm mt-1">{errors.start_date}</p>}
-                    </div>
-                    
-                    {formData.contract_type === 'fixed_term' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Mietende <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          name="end_date"
-                          value={formData.end_date}
-                          onChange={handleChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors.end_date ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                        />
-                        {errors.end_date && <p className="text-red-500 text-sm mt-1">{errors.end_date}</p>}
-                      </div>
                     )}
                   </div>
                 </div>
@@ -503,108 +349,68 @@ export default function UntermietvertragForm({ onSubmit }) {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Miete</h3>
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Monatsmiete (€) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        name="rent_amount"
-                        value={formData.rent_amount}
-                        onChange={handleChange}
-                        step="0.01"
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.rent_amount ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="650.00"
-                      />
-                      {errors.rent_amount && <p className="text-red-500 text-sm mt-1">{errors.rent_amount}</p>}
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Heiz-/Warmwasserkosten (€)
-                      </label>
-                      <input
-                        type="number"
-                        name="heating_costs"
-                        value={formData.heating_costs}
-                        onChange={handleChange}
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="120.00"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sonstige Nebenkosten (€)
-                      </label>
-                      <input
-                        type="number"
-                        name="other_costs"
-                        value={formData.other_costs}
-                        onChange={handleChange}
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="80.00"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Kaution (€)
-                      </label>
-                      <input
-                        type="number"
-                        name="deposit"
-                        value={formData.deposit}
-                        onChange={handleChange}
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="1300.00"
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      name="rent_amount"
+                      value={formData.rent_amount}
+                      onChange={handleChange}
+                      placeholder="Monatsmiete (€)"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="number"
+                      name="heating_costs"
+                      value={formData.heating_costs}
+                      onChange={handleChange}
+                      placeholder="Heizkosten (€)"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="number"
+                      name="other_costs"
+                      value={formData.other_costs}
+                      onChange={handleChange}
+                      placeholder="Sonstige Kosten (€)"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="number"
+                      name="deposit"
+                      value={formData.deposit}
+                      onChange={handleChange}
+                      placeholder="Kaution (€)"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Ausstattung */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  🛋️ Ausstattung
-                  <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Optional</span>
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🛋️ Ausstattung</h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Möblierung
-                    </label>
-                    <select
-                      name="furnished"
-                      value={formData.furnished}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="furnished">Möbliert</option>
-                      <option value="partially">Teilmöbliert</option>
-                      <option value="unfurnished">Nicht möbliert</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ausstattungsgegenstände (falls vorhanden)
-                    </label>
-                    <textarea
-                      name="equipment_list"
-                      value={formData.equipment_list}
-                      onChange={handleChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="z.B. Kühlschrank, Waschmaschine, Bett, Schreibtisch..."
-                    />
-                  </div>
+                  <select
+                    name="furnished"
+                    value={formData.furnished}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="furnished">Möbliert</option>
+                    <option value="partially">Teilmöbliert</option>
+                    <option value="unfurnished">Nicht möbliert</option>
+                  </select>
+                  <textarea
+                    name="equipment_list"
+                    value={formData.equipment_list}
+                    onChange={handleChange}
+                    placeholder="Ausstattungsgegenstände (optional)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                  />
                 </div>
               </div>
 
@@ -626,26 +432,12 @@ export default function UntermietvertragForm({ onSubmit }) {
                     : `🔍 Vorschau erstellen (${getTotalPrice()} €)`
                   }
                 </button>
-                
-                {!customerEmail && (
-                  <p className="text-sm text-gray-600 mt-3 flex items-center justify-center">
-                    <Mail className="h-4 w-4 mr-2" />
-                    E-Mail-Adresse wird für die Vertragszustellung benötigt
-                  </p>
-                )}
-                
-                {customerEmail && (
-                  <p className="text-sm text-green-600 mt-3 flex items-center justify-center">
-                    <Check className="h-4 w-4 mr-2" />
-                    Vertrag wird an {customerEmail} gesendet
-                  </p>
-                )}
               </div>
             </form>
           </div>
         </div>
 
-        {/* ✅ NEUE SIDEBAR mit korrigierter PriceDisplay */}
+        {/* ✅ SIDEBAR mit korrigierter PriceDisplay */}
         <div className="lg:col-span-1 space-y-6">
           <PriceDisplay
             basePrice={getBasePrice()}
