@@ -1,4 +1,4 @@
-// pages/untermietvertrag.js - AKTUALISIERTE VERSION
+// pages/untermietvertrag.js - KORRIGIERTE VERSION MIT PDF-FUNKTIONALITÄT
 import { useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -101,6 +101,7 @@ export default function UntermietvertragPage() {
               
               {/* Payment Sidebar */}
               <div className="space-y-6">
+                {/* 🔧 KORRIGIERT: Alle notwendigen Props werden an PaymentModule übergeben */}
                 <PaymentModule
                   amount={getPrice()}
                   currency="€"
@@ -173,7 +174,7 @@ export default function UntermietvertragPage() {
                 {/* PDF erneut herunterladen */}
                 <button
                   onClick={() => {
-                    // PDF erneut generieren und downloaden
+                    // 🔧 KORRIGIERT: PDF erneut generieren mit korrekten Daten
                     fetch('/api/generate-pdf', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -183,7 +184,12 @@ export default function UntermietvertragPage() {
                         contractType: 'untermietvertrag'
                       })
                     })
-                    .then(response => response.blob())
+                    .then(response => {
+                      if (!response.ok) {
+                        throw new Error('PDF-Generierung fehlgeschlagen');
+                      }
+                      return response.blob();
+                    })
                     .then(blob => {
                       const url = window.URL.createObjectURL(blob)
                       const link = document.createElement('a')
@@ -193,7 +199,7 @@ export default function UntermietvertragPage() {
                     })
                     .catch(error => {
                       console.error('Download error:', error)
-                      alert('Download fehlgeschlagen. Bitte kontaktieren Sie den Support.')
+                      alert('Download fehlgeschlagen: ' + error.message)
                     })
                   }}
                   className="w-full bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center"
