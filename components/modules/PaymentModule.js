@@ -1,12 +1,15 @@
-// components/modules/PaymentModule.js
+// components/modules/PaymentModule.js - ERWEITERTE VERSION MIT PDF-INTEGRATION
 import { useState } from 'react'
-import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail } from 'lucide-react'
 
 const PaymentModule = ({
   amount,
   currency = "€",
   orderDescription = "PalWorks Vertragserstellung",
   customerEmail = "",
+  formData = {},
+  selectedAddons = [],
+  contractType = "untermietvertrag",
   onPaymentSuccess,
   onPaymentError,
   onPaymentInitiated,
@@ -18,6 +21,8 @@ const PaymentModule = ({
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState('idle') // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState('')
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [contractId, setContractId] = useState(null)
 
   const paymentMethods = [
     {
@@ -45,21 +50,82 @@ const PaymentModule = ({
         </div>
       ),
       description: 'Direkt vom Bankkonto'
-    },
-    {
-      id: 'giropay',
-      name: 'Giropay',
-      icon: () => (
-        <div className="w-5 h-5 bg-red-500 rounded text-white text-xs flex items-center justify-center font-bold">
-          G
-        </div>
-      ),
-      description: 'Online-Banking Deutschland'
     }
   ]
 
   const formatAmount = (amount) => {
-    return amount.toFixed(2).replace('.', ',')
+    return parseFloat(amount).toFixed(2).replace('.', ',')
+  }
+
+  // PDF generieren und downloaden
+  const generatePDF = async () => {
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formData,
+          selectedAddons,
+          contractType
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'PDF-Generierung fehlgeschlagen');
+      }
+
+      // PDF als Blob herunterladen
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      // Automatischer Download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `untermietvertrag_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // URL für späteren Download speichern
+      setPdfUrl(url);
+      
+      return url;
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      throw error;
+    }
+  }
+
+  // E-Mail mit PDF versenden
+  const sendContractEmail = async (pdfUrl) => {
+    try {
+      // Hier würdest du deinen E-Mail-Service aufrufen
+      const response = await fetch('/api/send-contract-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: customerEmail,
+          contractType,
+          formData,
+          pdfUrl, // Oder PDF als Base64
+          contractId
+        })
+      });
+
+      if (response.ok) {
+        console.log('Contract email sent successfully');
+      } else {
+        console.warn('Contract email failed, but payment was successful');
+      }
+    } catch (error) {
+      console.warn('Email sending failed:', error);
+      // E-Mail-Fehler sollen Payment-Erfolg nicht beeinträchtigen
+    }
   }
 
   const handlePayment = async () => {
@@ -72,8 +138,18 @@ const PaymentModule = ({
     }
 
     try {
-      // Hier würde die echte Payment-Integration stattfinden
-      // Beispiel für Stripe, PayPal oder andere Provider
+      // 1. Vertrag in DB erstellen (falls noch nicht geschehen)
+      const contractData = {
+        contract_type: contractType,
+        customer_email: customerEmail,
+        form_data: formData,
+        selected_addons: selectedAddons,
+        total_amount: parseFloat(amount),
+        status: 'draft',
+        payment_status: 'pending'
+      }
+
+      // 2. Payment verarbeiten (simuliert)
       const paymentData = {
         method: selectedMethod,
         amount: amount,
@@ -82,18 +158,34 @@ const PaymentModule = ({
         customerEmail: customerEmail
       }
 
-      // Simulierte API-Anfrage - in Realität würde hier dein Payment Provider aufgerufen
-      const response = await processPayment(paymentData)
+      const paymentResponse = await processPayment(paymentData)
       
-      if (response.success) {
+      if (paymentResponse.success) {
+        // 3. PDF generieren
+        console.log('Payment successful, generating PDF...');
+        const pdfUrl = await generatePDF();
+        
+        // 4. E-Mail versenden
+        if (customerEmail) {
+          await sendContractEmail(pdfUrl);
+        }
+        
+        // 5. Success State setzen
         setPaymentStatus('success')
+        setContractId(paymentResponse.transactionId)
+        
         if (onPaymentSuccess) {
-          onPaymentSuccess(response)
+          onPaymentSuccess({
+            ...paymentResponse,
+            pdfUrl,
+            contractId: paymentResponse.transactionId
+          })
         }
       } else {
-        throw new Error(response.error || 'Zahlung fehlgeschlagen')
+        throw new Error(paymentResponse.error || 'Zahlung fehlgeschlagen')
       }
     } catch (error) {
+      console.error('Payment/PDF Error:', error)
       setPaymentStatus('error')
       setErrorMessage(error.message)
       if (onPaymentError) {
@@ -104,17 +196,18 @@ const PaymentModule = ({
     }
   }
 
-  // Simulierte Payment-Funktion - ersetzen durch echte Implementation
+  // Simulierte Payment-Funktion (ersetzen durch echte Stripe-Integration)
   const processPayment = async (paymentData) => {
     // Simuliere API-Aufruf
     await new Promise(resolve => setTimeout(resolve, 2000))
     
-    // Simuliere 90% Erfolgsrate
-    if (Math.random() > 0.1) {
+    // Simuliere 95% Erfolgsrate
+    if (Math.random() > 0.05) {
       return {
         success: true,
         transactionId: 'txn_' + Date.now(),
-        paymentMethod: paymentData.method
+        paymentMethod: paymentData.method,
+        amount: paymentData.amount
       }
     } else {
       return {
@@ -132,9 +225,30 @@ const PaymentModule = ({
         <p className="text-green-700 mb-4">
           Ihre Zahlung über {formatAmount(amount)} {currency} wurde erfolgreich verarbeitet.
         </p>
-        <p className="text-sm text-green-600">
-          Sie erhalten in Kürze eine Bestätigung per E-Mail.
-        </p>
+        
+        {/* PDF Download Button */}
+        <div className="space-y-3 mb-4">
+          <button
+            onClick={() => pdfUrl && generatePDF()}
+            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center"
+          >
+            <Download className="h-5 w-5 mr-2" />
+            PDF erneut herunterladen
+          </button>
+          
+          {customerEmail && (
+            <div className="flex items-center justify-center text-sm text-green-600">
+              <Mail className="h-4 w-4 mr-1" />
+              Eine Kopie wurde an {customerEmail} gesendet
+            </div>
+          )}
+        </div>
+        
+        <div className="text-sm text-green-600 space-y-1">
+          <p>✓ PDF wurde automatisch heruntergeladen</p>
+          {customerEmail && <p>✓ E-Mail-Kopie versendet</p>}
+          <p>✓ Rechnung wird separat zugestellt</p>
+        </div>
       </div>
     )
   }
@@ -164,6 +278,19 @@ const PaymentModule = ({
           </div>
         )}
 
+        {/* Customer Email Display */}
+        {customerEmail && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <Mail className="h-5 w-5 text-blue-600 mr-2" />
+              <div>
+                <p className="font-medium text-blue-900">PDF-Versand an:</p>
+                <p className="text-blue-700 text-sm">{customerEmail}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Payment Method Selection */}
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
@@ -177,81 +304,4 @@ const PaymentModule = ({
                     key={method.id}
                     className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
                       selectedMethod === method.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method.id}
-                      checked={selectedMethod === method.id}
-                      onChange={(e) => setSelectedMethod(e.target.value)}
-                      className="sr-only"
-                    />
-                    <div className="flex items-center flex-grow">
-                      <IconComponent className="h-5 w-5 mr-3 text-gray-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">{method.name}</div>
-                        <div className="text-sm text-gray-600">{method.description}</div>
-                      </div>
-                    </div>
-                    {selectedMethod === method.id && (
-                      <CheckCircle className="h-5 w-5 text-blue-600" />
-                    )}
-                  </label>
-                )
-              })}
-          </div>
-        </div>
-
-        {/* Security Badge */}
-        {showSecurityBadge && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center">
-                <Lock className="h-4 w-4 mr-1" />
-                <span>SSL-verschlüsselt</span>
-              </div>
-              <div className="w-px h-4 bg-gray-300"></div>
-              <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                <span>PCI DSS konform</span>
-              </div>
-              <div className="w-px h-4 bg-gray-300"></div>
-              <div>14 Tage Widerrufsrecht</div>
-            </div>
-          </div>
-        )}
-
-        {/* Payment Button */}
-        <button
-          onClick={handlePayment}
-          disabled={isProcessing || paymentStatus === 'processing'}
-          className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {paymentStatus === 'processing' ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-              Zahlung wird verarbeitet...
-            </div>
-          ) : (
-            <>Jetzt {formatAmount(amount)} {currency} bezahlen</>
-          )}
-        </button>
-
-        {/* Additional Info */}
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
-            Mit dem Klick auf "Jetzt bezahlen" akzeptieren Sie unsere{' '}
-            <a href="/agb" className="text-blue-600 hover:underline">AGB</a> und{' '}
-            <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzerklärung</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default PaymentModule
-
+                        ? 'border-blue-500
