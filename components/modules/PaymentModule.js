@@ -304,4 +304,135 @@ const PaymentModule = ({
                     key={method.id}
                     className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
                       selectedMethod === method.id
-                        ? 'border-blue-500
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method.id}
+                      checked={selectedMethod === method.id}
+                      onChange={(e) => setSelectedMethod(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center flex-grow">
+                      <IconComponent className="h-5 w-5 mr-3 text-gray-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">{method.name}</div>
+                        <div className="text-sm text-gray-600">{method.description}</div>
+                      </div>
+                    </div>
+                    {selectedMethod === method.id && (
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                    )}
+                  </label>
+                )
+              })}
+          </div>
+        </div>
+
+        {/* Was Sie erhalten */}
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <h4 className="font-medium text-green-900 mb-3">✓ Das erhalten Sie sofort:</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-green-800">
+            <div className="flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+              Rechtssicherer Untermietvertrag
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+              Automatischer PDF-Download
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+              E-Mail-Versand an Ihre Adresse
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+              Professionelles Layout
+            </div>
+            {selectedAddons.includes('protocol') && (
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                Übergabeprotokoll inklusive
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Security Badge */}
+        {showSecurityBadge && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+              <div className="flex items-center">
+                <Lock className="h-4 w-4 mr-1" />
+                <span>SSL-verschlüsselt</span>
+              </div>
+              <div className="w-px h-4 bg-gray-300"></div>
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                <span>DSGVO-konform</span>
+              </div>
+              <div className="w-px h-4 bg-gray-300"></div>
+              <div>14 Tage Widerrufsrecht</div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Button */}
+        <button
+          onClick={handlePayment}
+          disabled={isProcessing || paymentStatus === 'processing'}
+          className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {paymentStatus === 'processing' ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+              Zahlung wird verarbeitet...
+            </div>
+          ) : (
+            <>Jetzt {formatAmount(amount)} {currency} bezahlen</>
+          )}
+        </button>
+
+        {/* Additional Info */}
+        <div className="mt-4 text-center">
+          <p className="text-xs text-gray-500">
+            Mit dem Klick auf "Jetzt bezahlen" akzeptieren Sie unsere{' '}
+            <a href="/agb" className="text-blue-600 hover:underline">AGB</a> und{' '}
+            <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzerklärung</a>
+          </p>
+        </div>
+
+        {/* Process Steps Info */}
+        <div className="mt-6 border-t pt-4">
+          <div className="flex justify-between items-center text-xs text-gray-600">
+            <div className="text-center flex-1">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+                <span className="text-blue-600 font-semibold text-xs">1</span>
+              </div>
+              <span>Bezahlen</span>
+            </div>
+            <div className="w-4 h-px bg-gray-300 mx-1"></div>
+            <div className="text-center flex-1">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+                <span className="text-blue-600 font-semibold text-xs">2</span>
+              </div>
+              <span>PDF-Download</span>
+            </div>
+            <div className="w-4 h-px bg-gray-300 mx-1"></div>
+            <div className="text-center flex-1">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+                <span className="text-blue-600 font-semibold text-xs">3</span>
+              </div>
+              <span>E-Mail-Versand</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default PaymentModule
