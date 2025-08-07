@@ -1,28 +1,562 @@
-{
-  "name": "palworks-contracts",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "14.0.0",
-    "react": "^18",
-    "react-dom": "^18",
-    "@supabase/supabase-js": "^2.39.0",
-    "jspdf": "^2.5.1",
-    "stripe": "^14.0.0",
-    "lucide-react": "^0.263.1",
-    "nodemailer": "^6.9.8"
-  },
-  "devDependencies": {
-    "tailwindcss": "^3.3.0",
-    "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.24",
-    "eslint": "^8",
-    "eslint-config-next": "14.0.0"
+// components/modules/PaymentModule.js - Vollständige Gmail-Integration
+import { useState } from 'react'
+import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail, FileText, Loader2 } from 'lucide-react'
+
+const PaymentModule = ({
+  amount,
+  currency = "€",
+  orderDescription = "PalWorks Vertragserstellung",
+  customerEmail = "",
+  formData = {},
+  selectedAddons = [],
+  contractType = "untermietvertrag",
+  onPaymentSuccess,
+  onPaymentError,
+  onPaymentInitiated,
+  enabledMethods = ['card', 'paypal', 'sofort'],
+  showSecurityBadge = true,
+  className = ""
+}) => {
+  const [selectedMethod, setSelectedMethod] = useState('card')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState('idle') // idle, processing, success, error
+  const [emailStatus, setEmailStatus] = useState('pending') // pending, sending, sent, failed, warning
+  const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [contractId, setContractId] = useState(null)
+
+  const paymentMethods = [
+    {
+      id: 'card',
+      name: 'Kreditkarte',
+      icon: CreditCard,
+      description: 'Visa, Mastercard, American Express'
+    },
+    {
+      id: 'paypal',
+      name: 'PayPal',
+      icon: () => (
+        <div className="w-5 h-5 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
+          P
+        </div>
+      ),
+      description: 'Sicher mit PayPal bezahlen'
+    },
+    {
+      id: 'sofort',
+      name: 'Sofortüberweisung',
+      icon: () => (
+        <div className="w-5 h-5 bg-pink-500 rounded text-white text-xs flex items-center justify-center font-bold">
+          S
+        </div>
+      ),
+      description: 'Direkt vom Bankkonto'
+    }
+  ]
+
+  const formatAmount = (amount) => {
+    return parseFloat(amount).toFixed(2).replace('.', ',')
   }
+
+  // PDF generieren und downloaden
+  const generatePDF = async () => {
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formData,
+          selectedAddons,
+          contractType
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'PDF-Generierung fehlgeschlagen');
+      }
+
+      // PDF als Blob herunterladen
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      // Automatischer Download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `untermietvertrag_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // URL für späteren Download speichern
+      setPdfUrl(url);
+      
+      return url;
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      throw error;
+    }
+  }
+
+  // ✅ Gmail E-Mail-Versand-Funktion
+  const sendContractEmail = async (contractData) => {
+    try {
+      console.log('📧 Starte Gmail E-Mail-Versand...');
+      setEmailStatus('sending');
+      
+      const response = await fetch('/api/send-contract-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: customerEmail,
+          contractType,
+          formData,
+          selectedAddons,
+          contractId: contractData?.id || null
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ Gmail E-Mail erfolgreich versendet:', result.emailId);
+        console.log('📊 Provider:', result.provider);
+        
+        setEmailStatus('sent');
+        
+        return {
+          success: true,
+          emailId: result.emailId,
+          provider: result.provider,
+          message: `E-Mail mit Vertrag wurde erfolgreich über ${result.provider === 'gmail' ? 'Google Workspace' : 'E-Mail-Service'} versendet!`
+        };
+      } else {
+        console.warn('⚠️ Gmail E-Mail-Versand fehlgeschlagen:', result);
+        
+        setEmailStatus('warning');
+        
+        return {
+          success: false,
+          fallback: result.fallback || false,
+          message: result.userMessage || result.warning || 'E-Mail konnte nicht versendet werden, aber PDF wurde generiert.'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Gmail E-Mail-Versand-Fehler:', error);
+      
+      setEmailStatus('failed');
+      
+      return {
+        success: false,
+        error: error.message,
+        message: 'E-Mail-Versand fehlgeschlagen. Bitte kontaktieren Sie den Support oder laden Sie das PDF direkt herunter.'
+      };
+    }
+  };
+
+  // ✅ Erweiterte Payment-Handler mit Gmail-Integration
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    setPaymentStatus('processing');
+    setErrorMessage('');
+    setEmailStatus('pending');
+
+    if (onPaymentInitiated) {
+      onPaymentInitiated(selectedMethod, amount);
+    }
+
+    try {
+      // 1. Vertrag in DB erstellen (falls noch nicht geschehen)
+      const contractData = {
+        contract_type: contractType,
+        customer_email: customerEmail,
+        form_data: formData,
+        selected_addons: selectedAddons,
+        total_amount: parseFloat(amount),
+        status: 'draft',
+        payment_status: 'pending'
+      };
+
+      // 2. Payment verarbeiten (simuliert - in Produktion durch Stripe ersetzen)
+      const paymentData = {
+        method: selectedMethod,
+        amount: amount,
+        currency: currency,
+        description: orderDescription,
+        customerEmail: customerEmail
+      };
+
+      console.log('💳 Verarbeite Payment...');
+      const paymentResponse = await processPayment(paymentData);
+      
+      if (paymentResponse.success) {
+        // 3. Payment erfolgreich - Status updaten
+        setPaymentStatus('success');
+        
+        // 4. ✅ E-Mail mit PDF über Gmail versenden (Hauptfunktion!)
+        console.log('📧 Starte automatischen Gmail E-Mail-Versand...');
+        const emailResult = await sendContractEmail(contractData);
+        
+        // 5. Success-Handler aufrufen
+        if (onPaymentSuccess) {
+          onPaymentSuccess({
+            paymentId: paymentResponse.paymentId,
+            contractId: contractData.id,
+            emailStatus: emailResult.success ? 'sent' : 'failed',
+            emailId: emailResult.emailId,
+            emailProvider: emailResult.provider || 'gmail'
+          });
+        }
+
+        // 6. PDF auch zum direkten Download bereitstellen (wichtiger Fallback)
+        try {
+          await generatePDF();
+          console.log('✅ PDF-Fallback erstellt');
+        } catch (pdfError) {
+          console.warn('⚠️ PDF-Fallback fehlgeschlagen:', pdfError);
+        }
+
+        // 7. Benutzerfreundliche Success-Message mit Gmail-spezifischen Infos
+        const successMessage = emailResult.success 
+          ? `Payment erfolgreich! Ihr Vertrag wurde per Google Workspace E-Mail an ${customerEmail} versendet.`
+          : `Payment erfolgreich! PDF wurde generiert. ${emailResult.message}`;
+        
+        setSuccessMessage(successMessage);
+
+      } else {
+        throw new Error(paymentResponse.error || 'Payment fehlgeschlagen');
+      }
+
+    } catch (error) {
+      console.error('❌ Payment-Fehler:', error);
+      setPaymentStatus('failed');
+      setErrorMessage(error.message || 'Payment fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      
+      if (onPaymentError) {
+        onPaymentError(error);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Simulierte Payment-Funktion (ersetzen durch echte Stripe-Integration)
+  const processPayment = async (paymentData) => {
+    // Simuliere API-Aufruf
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Simuliere 95% Erfolgsrate
+    if (Math.random() > 0.05) {
+      return {
+        success: true,
+        paymentId: 'pay_' + Date.now(),
+        transactionId: 'txn_' + Date.now(),
+        paymentMethod: paymentData.method,
+        amount: paymentData.amount
+      }
+    } else {
+      return {
+        success: false,
+        error: 'Zahlung wurde von der Bank abgelehnt'
+      }
+    }
+  }
+
+  const getContractTitle = () => {
+    switch (contractType) {
+      case 'untermietvertrag':
+        return 'Untermietvertrag';
+      case 'garagenvertrag':
+        return 'Garagenvertrag';
+      case 'wg_untermietvertrag':
+        return 'WG-Untermietvertrag';
+      default:
+        return 'Vertrag';
+    }
+  }
+
+  const handleDownloadDemo = () => {
+    if (pdfUrl) {
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = `${getContractTitle().toLowerCase()}_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      generatePDF();
+    }
+  }
+
+  const handleRestart = () => {
+    setPaymentStatus('idle');
+    setEmailStatus('pending');
+    setErrorMessage('');
+    setSuccessMessage('');
+    setPdfUrl(null);
+    setContractId(null);
+  }
+
+  // ✅ Gmail-spezifische Success-Anzeige
+  if (paymentStatus === 'success') {
+    return (
+      <div className={`bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center ${className}`}>
+        <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-green-800 mb-2">Payment erfolgreich!</h3>
+        <p className="text-green-700 mb-4">
+          Ihre Zahlung über {formatAmount(amount)} {currency} wurde erfolgreich verarbeitet.
+        </p>
+
+        {/* Gmail-spezifische E-Mail-Status-Anzeige */}
+        <div className="mb-4">
+          {emailStatus === 'sending' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
+                <p className="text-sm text-blue-800">
+                  <strong>E-Mail wird versendet...</strong> Versand über Google Workspace läuft.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {emailStatus === 'sent' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-green-800">
+                ✅ <strong>E-Mail versendet!</strong> Ihr Vertrag wurde über Google Workspace an <strong>{customerEmail}</strong> gesendet.
+              </p>
+              <p className="text-xs text-green-700 mt-1">
+                Falls die E-Mail nicht ankommt, prüfen Sie bitte Ihren Spam-Ordner.
+              </p>
+            </div>
+          )}
+          
+          {emailStatus === 'warning' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>E-Mail-Problem:</strong> PDF wurde erstellt, aber Gmail-Versand war nicht möglich.
+                <br />
+                <strong>Lösung:</strong> Laden Sie das PDF direkt herunter oder kontaktieren Sie support@palworks.de
+              </p>
+            </div>
+          )}
+          
+          {emailStatus === 'failed' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-800">
+                ❌ <strong>Gmail-Versand fehlgeschlagen:</strong> Ihr Vertrag wurde als PDF erstellt, aber die E-Mail konnte nicht versendet werden.
+                <br />
+                <strong>Nächste Schritte:</strong> PDF herunterladen oder Support kontaktieren.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* PDF-Download-Buttons */}
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between bg-gray-50 p-3 rounded">
+            <span className="flex items-center">
+              <FileText className="h-4 w-4 mr-2" />
+              {getContractTitle()}.pdf
+            </span>
+            <Download className="h-4 w-4 text-gray-400" />
+          </div>
+          
+          {formData?.include_protocol && (
+            <div className="flex items-center justify-between bg-blue-50 p-3 rounded">
+              <span className="flex items-center">
+                <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                Übergabeprotokoll.pdf
+              </span>
+              <Download className="h-4 w-4 text-blue-400" />
+            </div>
+          )}
+        </div>
+
+        {/* Support-Hinweis bei Gmail-Problemen */}
+        {(emailStatus === 'failed' || emailStatus === 'warning') && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h5 className="font-semibold mb-2 text-blue-900">📞 Support kontaktieren</h5>
+            <p className="text-sm text-blue-800 mb-3">
+              Bei Problemen mit dem Gmail-Versand wenden Sie sich an:
+            </p>
+            <p className="text-sm font-medium text-blue-900">support@palworks.de</p>
+            <p className="text-xs text-blue-700 mt-2">
+              Bitte geben Sie Ihre E-Mail-Adresse ({customerEmail}) und die Uhrzeit Ihres Kaufs an.
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              <strong>Tipp:</strong> Ihr Vertrag wurde erfolgreich erstellt - das PDF können Sie direkt herunterladen.
+            </p>
+          </div>
+        )}
+
+        {/* Gmail-spezifische Hinweise bei Erfolg */}
+        {emailStatus === 'sent' && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <h5 className="font-semibold mb-2 text-green-900">📬 E-Mail erfolgreich versendet</h5>
+            <p className="text-sm text-green-800 mb-2">
+              Ihr Vertrag wurde über <strong>Google Workspace</strong> versendet und sollte innerhalb weniger Minuten in Ihrem Posteingang ankommen.
+            </p>
+            <p className="text-xs text-green-700">
+              <strong>Tipp:</strong> Falls die E-Mail nicht ankommt, prüfen Sie den Spam-Ordner oder laden Sie das PDF direkt herunter.
+            </p>
+          </div>
+        )}
+
+        {/* Download-Buttons */}
+        <div className="space-y-3">
+          <button
+            onClick={handleDownloadDemo}
+            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 flex items-center justify-center"
+          >
+            <Download className="h-5 w-5 mr-2" />
+            PDF Herunterladen
+          </button>
+          
+          <button
+            onClick={handleRestart}
+            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700"
+          >
+            ✨ Neuer Vertrag
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentStatus === 'error') {
+    return (
+      <div className={`bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center ${className}`}>
+        <AlertCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-red-800 mb-2">Zahlung fehlgeschlagen</h3>
+        <p className="text-red-700 mb-4">{errorMessage}</p>
+        <button
+          onClick={() => setPaymentStatus('idle')}
+          className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`bg-white rounded-lg border shadow-sm p-6 ${className}`}>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Zahlung abschließen</h3>
+        <div className="flex items-center justify-between">
+          <span className="text-2xl font-bold text-gray-900">
+            {formatAmount(amount)} {currency}
+          </span>
+          {showSecurityBadge && (
+            <div className="flex items-center text-green-600 text-sm">
+              <Lock className="h-4 w-4 mr-1" />
+              <span>Sicher</span>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-gray-600 mt-1">{orderDescription}</p>
+      </div>
+
+      {/* Payment Methods */}
+      <div className="space-y-3 mb-6">
+        {paymentMethods
+          .filter(method => enabledMethods.includes(method.id))
+          .map((method) => {
+            const IconComponent = method.icon;
+            return (
+              <label
+                key={method.id}
+                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                  selectedMethod === method.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={method.id}
+                  checked={selectedMethod === method.id}
+                  onChange={(e) => setSelectedMethod(e.target.value)}
+                  className="sr-only"
+                />
+                <IconComponent className="h-5 w-5 text-gray-600 mr-3" />
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{method.name}</div>
+                  <div className="text-sm text-gray-500">{method.description}</div>
+                </div>
+                {selectedMethod === method.id && (
+                  <div className="h-4 w-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <div className="h-2 w-2 bg-white rounded-full"></div>
+                  </div>
+                )}
+              </label>
+            );
+          })}
+      </div>
+
+      {/* Pay Button */}
+      <button
+        onClick={handlePayment}
+        disabled={isProcessing}
+        className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors ${
+          isProcessing
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-blue-600 hover:bg-blue-700'
+        }`}
+      >
+        {isProcessing ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+            Zahlung wird verarbeitet...
+          </div>
+        ) : (
+          <>Jetzt {formatAmount(amount)} {currency} bezahlen</>
+        )}
+      </button>
+
+      {/* Additional Info */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-gray-500">
+          Mit dem Klick auf "Jetzt bezahlen" akzeptieren Sie unsere{' '}
+          <a href="/agb" className="text-blue-600 hover:underline">AGB</a> und{' '}
+          <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzerklärung</a>
+        </p>
+      </div>
+
+      {/* Process Steps Info */}
+      <div className="mt-6 border-t pt-4">
+        <div className="flex justify-between items-center text-xs text-gray-600">
+          <div className="text-center flex-1">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+              <span className="text-blue-600 font-semibold text-xs">1</span>
+            </div>
+            <span>Bezahlen</span>
+          </div>
+          <div className="w-4 h-px bg-gray-300 mx-1"></div>
+          <div className="text-center flex-1">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+              <span className="text-blue-600 font-semibold text-xs">2</span>
+            </div>
+            <span>PDF-Download</span>
+          </div>
+          <div className="w-4 h-px bg-gray-300 mx-1"></div>
+          <div className="text-center flex-1">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+              <span className="text-blue-600 font-semibold text-xs">3</span>
+            </div>
+            <span>Gmail-Versand</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
+
+export default PaymentModule;
