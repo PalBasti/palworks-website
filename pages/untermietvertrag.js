@@ -258,7 +258,7 @@ export default function UntermietvertragPage() {
               {/* Support Info */}
               <div className="mt-8 pt-6 border-t text-sm text-gray-600">
                 <p>
-                  <strong>Benötigen Sie Hilfe?</strong><br>
+                  <strong>Benötigen Sie Hilfe?</strong><br />
                   Kontaktieren Sie uns unter <a href="mailto:support@palworks.de" className="text-blue-600 hover:underline">support@palworks.de</a>
                 </p>
                 <p className="mt-2">
