@@ -2,13 +2,13 @@
 import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator';
 import nodemailer from 'nodemailer';
 
-// Gmail SMTP-Konfiguration
+// Gmail SMTP-Konfiguration (PalWorks Alias-Setup)
 const createGmailTransporter = () => {
   return nodemailer.createTransporter({
     service: 'gmail',
     auth: {
-      user: process.env.GMAIL_USER, // bastian.aurich@googlemail.com
-      pass: process.env.GMAIL_APP_PASSWORD // App-Passwort aus Google Account
+      user: process.env.GMAIL_SMTP_USER, // aurich@palworks.de
+      pass: process.env.GMAIL_SMTP_PASS  // App-Passwort für aurich@palworks.de
     }
   });
 };
@@ -20,9 +20,10 @@ const sendEmailWithGmail = async (to, subject, htmlContent, pdfBuffer = null) =>
   const mailOptions = {
     from: {
       name: 'PalWorks - Rechtssichere Verträge',
-      address: process.env.GMAIL_USER
+      address: process.env.GMAIL_SMTP_USER
     },
     to: to,
+    replyTo: process.env.GMAIL_REPLY_TO, // Optional: Reply-To setzen
     subject: subject,
     html: htmlContent,
     attachments: pdfBuffer ? [{
@@ -170,8 +171,8 @@ function createContractEmailTemplate(formData, contractType, selectedAddons = []
 
         <div class="footer">
           <strong>PalWorks - Rechtssichere Vertragsvorlagen</strong><br>
-          Web: <a href="https://palworks.de">palworks.de</a> | E-Mail: <a href="mailto:support@palworks.de">support@palworks.de</a><br>
-          <small style="color: #999;">Diese E-Mail wurde automatisch generiert.</small>
+          Web: <a href="https://palworks.de">palworks.de</a> | Support: <a href="mailto:support@palworks.de">support@palworks.de</a><br>
+          <small style="color: #999;">Diese E-Mail wurde automatisch von noreply@palworks.de generiert.</small>
         </div>
       </div>
     </body>
