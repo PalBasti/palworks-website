@@ -1,6 +1,6 @@
 // pages/api/send-contract-email.js - PRODUKTIVE VERSION MIT GMAIL SMTP
-import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator';
-import nodemailer from 'nodemailer';
+const { generateAndReturnPDF } = require('../../lib/pdf/untermietvertragGenerator');
+const nodemailer = require('nodemailer');
 
 // Gmail SMTP-Konfiguration (PalWorks Alias-Setup)
 const createGmailTransporter = () => {
@@ -49,7 +49,7 @@ const sendEmailWithGmail = async (to, subject, htmlContent, pdfBuffer = null) =>
   }
 };
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -180,7 +180,7 @@ function createContractEmailTemplate(formData, contractType, selectedAddons = []
   `;
 }
 
-export const config = {
+module.exports.config = {
   api: {
     responseLimit: '10mb',
   },
