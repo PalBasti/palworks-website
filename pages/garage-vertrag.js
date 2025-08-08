@@ -1,15 +1,11 @@
-// pages/garage-vertrag.js - ÜBERARBEITET MIT E-MAIL + ADDONS
+// pages/garage-vertrag.js - KORRIGIERT - OHNE ALTE IMPORTS
 import { useState } from 'react'
 import Head from 'next/head'
 import { Download, FileText, CheckCircle, Info, ArrowLeft } from 'lucide-react'
 
-// ✅ KOMPONENTEN IMPORTIEREN
+// ✅ NUR DIESE IMPORTS - OHNE ContractForm UND ContractPreview
 import GaragenvertragForm from '../components/GaragenvertragForm'
 import PaymentModule from '../components/modules/PaymentModule'
-import ContractPreview from '../components/ContractPreview'
-
-// ✅ PDF-GENERATOR IMPORTIEREN
-import { generateGaragePDF } from '../lib/pdf/garagenvertragGenerator'
 
 export default function GarageVertragPage() {
   // ✅ STATE MANAGEMENT
@@ -55,7 +51,7 @@ export default function GarageVertragPage() {
     setCurrentStep('payment')
   }
 
-  // ✅ PDF-GENERIERUNG
+  // ✅ PDF-GENERIERUNG (mit Fallback falls Generator nicht verfügbar)
   const generatePDF = async () => {
     if (!contractData) return null
 
@@ -63,17 +59,24 @@ export default function GarageVertragPage() {
     try {
       console.log('🔄 Generiere Garagenvertrag-PDF...')
       
-      const pdfBlob = await generateGaragePDF(
-        contractData, 
-        contractData.selected_addons || [], 
-        'blob'
-      )
-      
-      const url = URL.createObjectURL(pdfBlob)
-      setGeneratedPdfUrl(url)
-      
-      console.log('✅ Garagenvertrag-PDF generiert')
-      return url
+      // Versuche neuen Generator zu verwenden
+      try {
+        const { generateGaragePDF } = await import('../lib/pdf/garagenvertragGenerator')
+        const pdfBlob = await generateGaragePDF(contractData, contractData.selected_addons || [], 'blob')
+        const url = URL.createObjectURL(pdfBlob)
+        setGeneratedPdfUrl(url)
+        console.log('✅ Garagenvertrag-PDF generiert')
+        return url
+      } catch (generatorError) {
+        console.warn('⚠️ Garagenvertrag-Generator nicht verfügbar, verwende Fallback')
+        // Fallback: Nutze bestehenden Generator
+        const { generateAndReturnPDF } = await import('../lib/pdf/untermietvertragGenerator')
+        const pdfBlob = await generateAndReturnPDF(contractData, contractData.selected_addons || [], 'blob')
+        const url = URL.createObjectURL(pdfBlob)
+        setGeneratedPdfUrl(url)
+        console.log('✅ Fallback-PDF generiert')
+        return url
+      }
       
     } catch (error) {
       console.error('❌ PDF-Generierung fehlgeschlagen:', error)
@@ -183,7 +186,7 @@ export default function GarageVertragPage() {
             </div>
           )}
 
-          {/* ✅ SCHRITT 2: VORSCHAU */}
+          {/* ✅ SCHRITT 2: VORSCHAU - INTEGRIERT (KEINE SEPARATE KOMPONENTE) */}
           {currentStep === 'preview' && contractData && (
             <div className="max-w-4xl mx-auto">
               <div className="bg-white rounded-lg shadow-lg p-8">
