@@ -1,4 +1,38 @@
-// pages/garage-vertrag.js - KORRIGIERT - OHNE ALTE IMPORTS
+// ✅ PDF-GENERIERUNG mit jsPDF (wie Untermietvertrag)
+  const generatePDF = async () => {
+    if (!contractData) return null
+
+    setIsGenerating(true)
+    try {
+      console.log('🔄 Generiere Garagenvertrag-PDF...')
+      
+      // Versuche neuen jsPDF-Generator zu verwenden
+      try {
+        const { generateAndReturnGaragePDF } = await import('../lib/pdf/garagenvertragGenerator')
+        const pdfBlob = await generateAndReturnGaragePDF(contractData, contractData.selected_addons || [], 'blob')
+        const url = URL.createObjectURL(pdfBlob)
+        setGeneratedPdfUrl(url)
+        console.log('✅ Garagenvertrag-PDF generiert')
+        return url
+      } catch (generatorError) {
+        console.warn('⚠️ Garagenvertrag-Generator nicht verfügbar, verwende Fallback')
+        // Fallback: Nutze bestehenden Generator
+        const { generateAndReturnPDF } = await import('../lib/pdf/untermietvertragGenerator')
+        const pdfBlob = await generateAndReturnPDF(contractData, contractData.selected_addons || [], 'blob')
+        const url = URL.createObjectURL(pdfBlob)
+        setGeneratedPdfUrl(url)
+        console.log('✅ Fallback-PDF generiert')
+        return url
+      }
+      
+    } catch (error) {
+      console.error('❌ PDF-Generierung fehlgeschlagen:', error)
+      alert('PDF-Generierung fehlgeschlagen. Bitte versuchen Sie es erneut.')
+      return null
+    } finally {
+      setIsGenerating(false)
+    }
+  }// pages/garage-vertrag.js - KORRIGIERT - OHNE ALTE IMPORTS
 import { useState } from 'react'
 import Head from 'next/head'
 import { Download, FileText, CheckCircle, Info, ArrowLeft } from 'lucide-react'
