@@ -1,6 +1,5 @@
-// pages/api/send-contract-email.js - ERWEITERT FÜR GARAGENVERTRAG
+// pages/api/send-contract-email.js - ANGEPASST FÜR BROWSER-PDF
 import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator'
-import { generateGaragePDF } from '../../lib/pdf/garagenvertragGenerator' // NEU
 
 // Gmail SMTP-Konfiguration (unverändert)
 const createGmailTransporter = async () => {
@@ -123,16 +122,6 @@ const createGarageEmailTemplate = (formData, selectedAddons = []) => {
         </p>
       </div>
 
-      <!-- Legal Notice -->
-      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h4 style="color: #6c757d; margin: 0 0 10px 0; font-size: 14px;">⚖️ Rechtlicher Hinweis</h4>
-        <p style="margin: 0; font-size: 12px; color: #6c757d; line-height: 1.4;">
-          Dieser Vertrag wurde nach bestem Wissen und Gewissen erstellt. Für individuelle Rechtsberatung 
-          wenden Sie sich bitte an einen Anwalt. PalWorks übernimmt keine Haftung für die rechtliche 
-          Wirksamkeit in Einzelfällen.
-        </p>
-      </div>
-
       <!-- Footer -->
       <div style="text-align: center; padding: 20px; border-top: 1px solid #dee2e6; color: #6c757d;">
         <p style="margin: 0 0 10px 0; font-size: 14px;">
@@ -151,7 +140,6 @@ const createGarageEmailTemplate = (formData, selectedAddons = []) => {
 
 // ✅ UNTERMIETVERTRAG E-MAIL-TEMPLATE (Original beibehalten)
 const createContractEmailTemplate = (formData, contractType, selectedAddons = []) => {
-  // Original Untermietvertrag-Template hier...
   const addonDetails = selectedAddons.map(addonId => {
     switch(addonId) {
       case 'protocol':
@@ -224,8 +212,16 @@ const createContractEmailTemplate = (formData, contractType, selectedAddons = []
         ` : ''}
       </div>
 
-      <!-- Rest der E-Mail identisch zu Garage-Template... -->
-      <!-- Nächste Schritte, Support, Footer etc. -->
+      <!-- Footer -->
+      <div style="text-align: center; padding: 20px; border-top: 1px solid #dee2e6; color: #6c757d;">
+        <p style="margin: 0 0 10px 0; font-size: 14px;">
+          <strong>PalWorks - Rechtssichere Verträge</strong><br>
+          Ihr Partner für professionelle Do-it-yourself-Verträge
+        </p>
+        <p style="margin: 0; font-size: 12px;">
+          Diese E-Mail wurde automatisch generiert.
+        </p>
+      </div>
       
     </body>
     </html>
@@ -307,12 +303,15 @@ export default async function handler(req, res) {
       case 'garage':
         console.log('🔄 Generiere Garagenvertrag-PDF...')
         try {
-          pdfBuffer = await generateGaragePDF(formData, selectedAddons || [], 'arraybuffer')
+          // ✅ VERWENDE NEUEN jsPDF-BASIERTEN GENERATOR
+          const { generateAndReturnGaragePDF } = await import('../../lib/pdf/garagenvertragGenerator')
+          pdfBuffer = await generateAndReturnGaragePDF(formData, selectedAddons || [], 'arraybuffer')
         } catch (error) {
-          console.warn('⚠️ Garagenvertrag-PDF-Generator nicht verfügbar, verwende Fallback')
-          // Fallback: Nutze Untermietvertrag-Generator oder erstelle Mock-PDF
+          console.warn('⚠️ Garagenvertrag-Generator nicht verfügbar, verwende Fallback')
+          // Fallback: Nutze Untermietvertrag-Generator
           pdfBuffer = await generateAndReturnPDF(formData, selectedAddons || [], 'arraybuffer')
         }
+        
         htmlContent = createGarageEmailTemplate(formData, selectedAddons)
         const garageType = formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'
         subject = `Ihr ${garageType}mietvertrag von PalWorks - Sofort einsatzbereit!`
