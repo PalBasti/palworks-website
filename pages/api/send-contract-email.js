@@ -1,21 +1,42 @@
-// pages/api/send-contract-email.js - MINIMAL TEST
+// pages/api/send-contract-email.js - ERWEITERTE DIAGNOSE
 export default async function handler(req, res) {
-  console.log('✅ E-Mail API aufgerufen - nodemailer test...');
+  console.log('✅ E-Mail API aufgerufen - nodemailer diagnose...');
   
   try {
-    // Teste ob nodemailer geladen werden kann
+    // Dynamic import testen
     const nodemailer = await import('nodemailer');
-    console.log('✅ nodemailer erfolgreich geladen:', typeof nodemailer.default);
+    console.log('📋 nodemailer details:', {
+      type: typeof nodemailer.default,
+      hasCreateTransporter: typeof nodemailer.default?.createTransporter,
+      keys: Object.keys(nodemailer.default || {}),
+      directAccess: typeof nodemailer.createTransporter
+    });
+    
+    // Versuche Transporter zu erstellen
+    const createTransporter = nodemailer.default?.createTransporter || nodemailer.createTransporter;
+    console.log('🔧 createTransporter type:', typeof createTransporter);
+    
+    if (createTransporter) {
+      const transporter = createTransporter({
+        service: 'gmail',
+        auth: { user: 'test', pass: 'test' }
+      });
+      console.log('✅ Transporter erstellt:', typeof transporter);
+    }
     
     return res.status(200).json({
       success: true,
-      message: 'nodemailer test erfolgreich',
-      hasCreateTransporter: typeof nodemailer.default?.createTransporter
+      message: 'nodemailer diagnose erfolgreich',
+      details: {
+        defaultType: typeof nodemailer.default,
+        hasCreateTransporter: typeof (nodemailer.default?.createTransporter || nodemailer.createTransporter),
+        canCreateTransporter: !!(nodemailer.default?.createTransporter || nodemailer.createTransporter)
+      }
     });
   } catch (error) {
-    console.error('❌ nodemailer test fehler:', error);
+    console.error('❌ nodemailer diagnose fehler:', error);
     return res.status(500).json({
-      error: 'nodemailer test fehlgeschlagen',
+      error: 'nodemailer diagnose fehlgeschlagen',
       details: error.message
     });
   }
