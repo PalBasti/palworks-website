@@ -128,18 +128,19 @@ export default function UntermietvertragForm({ onSubmit }) {
     }
   }
 
-  // ✅ NEUER ADDON-HANDLER
-  const handleAddonToggle = (addonId) => {
-    console.log('🔍 Toggling addon:', addonId)
-    setSelectedAddons(prev => {
-      const newSelection = prev.includes(addonId) 
-        ? prev.filter(id => id !== addonId)
-        : [...prev, addonId]
-      console.log('🔍 New selected addons:', newSelection)
-      return newSelection
-    })
-  }
-
+// NACHHER (erweiterte Debugging):
+const handleAddonToggle = (addonId) => {
+  console.log('🔍 Toggling addon:', addonId)
+  console.log('🔍 Available addons:', addons.map(a => ({id: a.id, addon_key: a.addon_key, name: a.name})))
+  setSelectedAddons(prev => {
+    const newSelection = prev.includes(addonId) 
+      ? prev.filter(id => id !== addonId)
+      : [...prev, addonId]
+    console.log('🔍 New selected addons:', newSelection)
+    console.log('🔍 Protocol selected?', newSelection.includes('protocol'))
+    return newSelection
+  })
+}
   // ✅ BEWÄHRTE VALIDIERUNG aus Live-Version
   const validateForm = () => {
     const newErrors = {}
@@ -173,23 +174,24 @@ export default function UntermietvertragForm({ onSubmit }) {
     return Object.keys(newErrors).length === 0
   }
 
-  // ✅ ERWEITERTER SUBMIT mit neuen Daten
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (validateForm()) {
-      const extendedData = {
-        ...formData,
-        selected_addons: selectedAddons,
-        customer_email: customerEmail,
-        newsletter_signup: newsletterSignup,
-        // ✅ RÜCKWÄRTSKOMPATIBILITÄT: include_protocol aus selectedAddons ableiten
-        include_protocol: selectedAddons.includes('protocol')
-      }
-      console.log('🔍 Submitting form with data:', extendedData)
-      onSubmit(extendedData)
+const handleSubmit = (e) => {
+  e.preventDefault()
+  if (validateForm()) {
+    const extendedData = {
+      ...formData,
+      selected_addons: selectedAddons,
+      customer_email: customerEmail,
+      newsletter_signup: newsletterSignup,
+      include_protocol: selectedAddons.includes('protocol')
     }
+    console.log('🔍 === FORM SUBMIT DEBUG ===')
+    console.log('🔍 Selected addons:', selectedAddons)
+    console.log('🔍 Include protocol:', selectedAddons.includes('protocol'))
+    console.log('🔍 Extended data:', extendedData)
+    console.log('🔍 === END SUBMIT DEBUG ===')
+    onSubmit(extendedData)
   }
-
+}
   // ✅ PREISFUNKTIONEN - kompatibel mit Live-Version
   const getBasePrice = () => 12.90
   
