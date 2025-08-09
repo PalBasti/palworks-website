@@ -180,7 +180,7 @@ export default function UntermietvertragPage() {
                     contractType="untermietvertrag"
                     formData={contractData}
                     selectedAddons={getSelectedAddons()}
-                    totalAmount={getPrice()}
+                    amount={getPrice()}
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentError={handlePaymentError}
                     customerEmail={contractData.customer_email}
