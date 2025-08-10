@@ -6,7 +6,7 @@ const createGmailTransporter = async () => {
   // ✅ KORRIGIERT: Dynamic import statt require für Vercel
   const nodemailer = await import('nodemailer');
   
-  return nodemailer.default.createTransporter({
+  return nodemailer.createTransporter({
     service: 'gmail',
     host: 'smtp.gmail.com',
     port: 587,
