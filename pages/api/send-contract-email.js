@@ -1,10 +1,9 @@
 // pages/api/send-contract-email.js - VERCEL SERVERLESS KOMPATIBEL
 import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator'
 
-// ✅ ALTERNATIVE LÖSUNG: Dynamic import für Vercel
+// ✅ ZURÜCK ZUR FUNKTIONIERENDEN REQUIRE() LÖSUNG
 const createGmailTransporter = async () => {
-  // ✅ KORRIGIERT: Dynamic import statt require für Vercel
-  const nodemailer = await import('nodemailer');
+  const nodemailer = require('nodemailer');
   
   return nodemailer.createTransporter({
     service: 'gmail',
