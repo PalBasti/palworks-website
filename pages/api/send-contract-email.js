@@ -1,9 +1,9 @@
 // pages/api/send-contract-email.js - ANGEPASST FÜR BROWSER-PDF
 import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator'
+const nodemailer = require('nodemailer')
 
 // Gmail SMTP-Konfiguration (unverändert)
 const createGmailTransporter = async () => {
-  const nodemailer = require('nodemailer')
   return nodemailer.createTransporter({
     service: 'gmail',
     host: 'smtp.gmail.com',
