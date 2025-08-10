@@ -1,9 +1,16 @@
-// pages/api/send-contract-email.js - ANGEPASST FÜR BROWSER-PDF
+// pages/api/send-contract-email.js - VOLLSTÄNDIG KORRIGIERT FÜR VERCEL
 import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator'
-const nodemailer = require('nodemailer')
 
-// Gmail SMTP-Konfiguration (unverändert)
+// ✅ KORRIGIERT: Lazy loading für nodemailer in Vercel
+let nodemailer;
+
+// Gmail SMTP-Konfiguration (korrigiert)
 const createGmailTransporter = async () => {
+  // ✅ KORRIGIERT: Lazy loading statt direkter require()
+  if (!nodemailer) {
+    nodemailer = require('nodemailer');
+  }
+  
   return nodemailer.createTransporter({
     service: 'gmail',
     host: 'smtp.gmail.com',
