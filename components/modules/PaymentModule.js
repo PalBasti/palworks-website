@@ -1,11 +1,9 @@
-// components/modules/PaymentModule.js - KORRIGIERTE VERSION mit dynamischer Preisberechnung
-
-import { useState, useEffect, useMemo } from 'react'
-import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail, Loader2 } from 'lucide-react'
-import { getAddonsByContractType } from '@/lib/supabase/addonService'
+// components/modules/PaymentModule.js - KORRIGIERTE VERSION OHNE SYNTAX-FEHLER
+import { useState } from 'react'
+import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail } from 'lucide-react'
 
 const PaymentModule = ({
-  amount: propAmount, // Prop amount als Fallback
+  amount,
   currency = "€",
   orderDescription = "PalWorks Vertragserstellung",
   customerEmail = "",
@@ -21,64 +19,10 @@ const PaymentModule = ({
 }) => {
   const [selectedMethod, setSelectedMethod] = useState('card')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState('idle')
+  const [paymentStatus, setPaymentStatus] = useState('idle') // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState('')
   const [pdfUrl, setPdfUrl] = useState(null)
   const [contractId, setContractId] = useState(null)
-  const [addons, setAddons] = useState([])
-  const [addonsLoaded, setAddonsLoaded] = useState(false)
-
-  // Basispreise für verschiedene Vertragstypen
-  const basePrices = {
-    untermietvertrag: 12.90,
-    mietvertrag: 15.90,
-    garagenvertrag: 7.90,
-    stellplatzvertrag: 7.90,
-    gewerbemietvertrag: 24.90
-  }
-
-  const basePrice = basePrices[contractType] || 12.90
-
-  // Addons laden beim Mount oder wenn contractType ändert
-  useEffect(() => {
-    const loadAddons = async () => {
-      try {
-        const response = await getAddonsByContractType(contractType)
-        if (response.success) {
-          setAddons(response.data || [])
-        } else {
-          console.warn('Addon loading failed:', response.error)
-          setAddons([])
-        }
-      } catch (error) {
-        console.error('Error loading addons:', error)
-        setAddons([])
-      } finally {
-        setAddonsLoaded(true)
-      }
-    }
-
-    if (contractType) {
-      loadAddons()
-    }
-  }, [contractType])
-
-  // Dynamische Preisberechnung basierend auf aktuellen Addons
-  const calculatedAmount = useMemo(() => {
-    if (!addonsLoaded) {
-      return propAmount || basePrice // Fallback während Laden
-    }
-
-    const addonTotal = selectedAddons.reduce((sum, addonKey) => {
-      const addon = addons.find(a => a.addon_key === addonKey)
-      return sum + (addon?.price || 0)
-    }, 0)
-
-    return basePrice + addonTotal
-  }, [basePrice, selectedAddons, addons, addonsLoaded, propAmount])
-
-  // Amount für Display formatieren
-  const displayAmount = calculatedAmount.toFixed(2)
 
   const paymentMethods = [
     {
@@ -113,77 +57,48 @@ const PaymentModule = ({
     return parseFloat(amount).toFixed(2).replace('.', ',')
   }
 
-  const handlePaymentSubmit = async () => {
-    if (!customerEmail?.trim()) {
-      setErrorMessage('Bitte geben Sie eine gültige E-Mail-Adresse ein')
-      return
+  const handlePayment = async () => {
+    if (isProcessing) return
+
+    setIsProcessing(true)
+    setPaymentStatus('processing')
+    setErrorMessage('')
+
+    if (onPaymentInitiated) {
+      onPaymentInitiated({
+        method: selectedMethod,
+        amount: amount,
+        formData: formData,
+        selectedAddons: selectedAddons
+      })
     }
 
     try {
-      setIsProcessing(true)
-      setPaymentStatus('processing')
-      setErrorMessage('')
-
-      if (onPaymentInitiated) {
-        onPaymentInitiated({ 
-          method: selectedMethod, 
-          amount: displayAmount,
-          contractType,
-          selectedAddons
-        })
-      }
-
-      // 1. Contract in Database erstellen
-      console.log('Creating contract with data:', {
-        formData,
-        selectedAddons,
-        totalAmount: displayAmount,
-        contractType
-      })
-
-      // 2. Payment verarbeiten (simuliert)
-      const paymentData = {
-        method: selectedMethod,
-        amount: displayAmount,
-        currency: currency,
-        description: orderDescription,
-        customerEmail: customerEmail,
-        contractType: contractType,
-        selectedAddons: selectedAddons
-      }
-
-      const paymentResponse = await processPayment(paymentData)
+      // Demo payment - simulate processing
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
-      if (paymentResponse.success) {
-        // 3. PDF generieren
-        console.log('Payment successful, generating PDF...')
-        const pdfUrl = await generatePDF()
-        
-        // 4. E-Mail versenden
-        if (customerEmail) {
-          await sendContractEmail(pdfUrl)
-        }
-        
-        // 5. Success State setzen
-        setPaymentStatus('success')
-        setContractId(paymentResponse.transactionId)
-        
-        if (onPaymentSuccess) {
-          onPaymentSuccess({
-            ...paymentResponse,
-            pdfUrl,
-            contractId: paymentResponse.transactionId,
-            finalAmount: displayAmount,
-            selectedAddons
-          })
-        }
-      } else {
-        throw new Error(paymentResponse.error || 'Zahlung fehlgeschlagen')
+      // Simulate success
+      const paymentResult = {
+        success: true,
+        paymentId: `demo_${Date.now()}`,
+        method: selectedMethod,
+        amount: amount,
+        pdfUrl: `/api/generate-pdf?type=${contractType}&demo=true`,
+        contractId: `contract_${Date.now()}`
       }
+
+      setPaymentStatus('success')
+      setPdfUrl(paymentResult.pdfUrl)
+      setContractId(paymentResult.contractId)
+
+      if (onPaymentSuccess) {
+        onPaymentSuccess(paymentResult)
+      }
+
     } catch (error) {
-      console.error('Payment/PDF Error:', error)
       setPaymentStatus('error')
-      setErrorMessage(error.message)
+      setErrorMessage(error.message || 'Ein unerwarteter Fehler ist aufgetreten')
+      
       if (onPaymentError) {
         onPaymentError(error)
       }
@@ -192,49 +107,200 @@ const PaymentModule = ({
     }
   }
 
-  // Simulierte Payment-Funktion (durch echte Stripe-Integration ersetzen)
-  const processPayment = async (paymentData) => {
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    if (Math.random() > 0.05) {
-      return {
-        success: true,
-        transactionId: 'txn_' + Date.now(),
-        paymentMethod: paymentData.method,
-        amount: paymentData.amount
-      }
-    } else {
-      return {
-        success: false,
-        error: 'Zahlung wurde von der Bank abgelehnt'
-      }
-    }
-  }
-
-  const generatePDF = async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    return `/api/pdf/contract_${Date.now()}.pdf`
-  }
-
-  const sendContractEmail = async (pdfUrl) => {
-    console.log(`Sending contract email to ${customerEmail} with PDF: ${pdfUrl}`)
-    await new Promise(resolve => setTimeout(resolve, 500))
-  }
-
   if (paymentStatus === 'success') {
     return (
-      <div className={`bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center ${className}`}>
-        <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-green-800 mb-2">Zahlung erfolgreich!</h3>
-        <p className="text-green-700 mb-4">
-          Ihre Zahlung über {formatAmount(displayAmount)} {currency} wurde erfolgreich verarbeitet.
-        </p>
-        {pdfUrl && (
-          <div className="space-y-3">
+      <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Zahlung erfolgreich!
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Ihr Vertrag wird erstellt und per E-Mail gesendet.
+          </p>
+          
+          {pdfUrl && (
             <button
               onClick={() => window.open(pdfUrl, '_blank')}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center mx-auto transition-colors"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
               <Download className="h-4 w-4 mr-2" />
               PDF herunterladen
             </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (paymentStatus === 'error') {
+    return (
+      <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Zahlung fehlgeschlagen
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {errorMessage || 'Bitte versuchen Sie es erneut.'}
+          </p>
+          <button
+            onClick={() => {
+              setPaymentStatus('idle')
+              setErrorMessage('')
+            }}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Erneut versuchen
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
+      <div className="mb-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Zahlung abschließen
+        </h3>
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <span className="text-sm text-gray-600">Gesamtbetrag:</span>
+          <span className="text-xl font-bold text-gray-900">
+            {formatAmount(amount)} {currency}
+          </span>
+        </div>
+      </div>
+
+      {customerEmail && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <Mail className="h-5 w-5 text-blue-600 mr-2" />
+            <div>
+              <p className="font-medium text-blue-900">PDF-Versand an:</p>
+              <p className="text-blue-700 text-sm">{customerEmail}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Method Selection */}
+      <div className="mb-6">
+        <h4 className="font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
+        <div className="grid grid-cols-1 gap-3">
+          {paymentMethods
+            .filter(method => enabledMethods.includes(method.id))
+            .map(method => {
+              const IconComponent = method.icon
+              return (
+                <label
+                  key={method.id}
+                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    selectedMethod === method.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={method.id}
+                    checked={selectedMethod === method.id}
+                    onChange={(e) => setSelectedMethod(e.target.value)}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center flex-grow">
+                    <IconComponent className="h-5 w-5 mr-3 text-gray-600" />
+                    <div>
+                      <div className="font-medium text-gray-900">{method.name}</div>
+                      <div className="text-sm text-gray-600">{method.description}</div>
+                    </div>
+                  </div>
+                  {selectedMethod === method.id && (
+                    <CheckCircle className="h-5 w-5 text-blue-600" />
+                  )}
+                </label>
+              )
+            })}
+        </div>
+      </div>
+
+      {/* Was Sie erhalten */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <h4 className="font-medium text-green-900 mb-2">✅ Das erhalten Sie:</h4>
+        <ul className="text-sm text-green-800 space-y-1">
+          <li>• Rechtssicherer {contractType} als PDF</li>
+          <li>• Sofortiger Download nach Zahlung</li>
+          <li>• E-Mail-Versand an {customerEmail || 'Ihre E-Mail'}</li>
+          {selectedAddons.length > 0 && (
+            <li>• {selectedAddons.length} zusätzliche(r) Service(s)</li>
+          )}
+        </ul>
+      </div>
+
+      {/* Payment Button */}
+      <button
+        onClick={handlePayment}
+        disabled={isProcessing}
+        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+      >
+        {isProcessing ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+            Zahlung wird verarbeitet...
+          </div>
+        ) : (
+          <>Jetzt {formatAmount(amount)} {currency} bezahlen</>
+        )}
+      </button>
+
+      {/* Additional Info */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-gray-500">
+          Mit dem Klick auf "Jetzt bezahlen" akzeptieren Sie unsere{' '}
+          <a href="/agb" className="text-blue-600 hover:underline">AGB</a> und{' '}
+          <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzerklärung</a>
+        </p>
+      </div>
+
+      {/* Process Steps Info */}
+      <div className="mt-6 border-t pt-4">
+        <div className="flex justify-between items-center text-xs text-gray-600">
+          <div className="text-center flex-1">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+              <span className="text-blue-600 font-semibold text-xs">1</span>
+            </div>
+            <span>Bezahlen</span>
+          </div>
+          <div className="w-4 h-px bg-gray-300 mx-1"></div>
+          <div className="text-center flex-1">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+              <span className="text-blue-600 font-semibold text-xs">2</span>
+            </div>
+            <span>PDF-Download</span>
+          </div>
+          <div className="w-4 h-px bg-gray-300 mx-1"></div>
+          <div className="text-center flex-1">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
+              <span className="text-blue-600 font-semibold text-xs">3</span>
+            </div>
+            <span>E-Mail-Versand</span>
+          </div>
+        </div>
+      </div>
+
+      {showSecurityBadge && (
+        <div className="mt-4 flex items-center justify-center text-xs text-gray-500">
+          <Lock className="h-3 w-3 mr-1" />
+          <span>256-Bit SSL verschlüsselt</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default PaymentModule
