@@ -1,10 +1,11 @@
-// components/modules/PaymentModule.js - VOLLSTÄNDIGE KORRIGIERTE VERSION
+// components/modules/PaymentModule.js - KORRIGIERTE VERSION mit dynamischer Preisberechnung
 
 import { useState, useEffect, useMemo } from 'react'
 import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail, Loader2 } from 'lucide-react'
+import { getAddonsByContractType } from '@/lib/supabase/addonService'
 
 const PaymentModule = ({
-  amount: propAmount,
+  amount: propAmount, // Prop amount als Fallback
   currency = "€",
   orderDescription = "PalWorks Vertragserstellung",
   customerEmail = "",
@@ -24,6 +25,8 @@ const PaymentModule = ({
   const [errorMessage, setErrorMessage] = useState('')
   const [pdfUrl, setPdfUrl] = useState(null)
   const [contractId, setContractId] = useState(null)
+  const [addons, setAddons] = useState([])
+  const [addonsLoaded, setAddonsLoaded] = useState(false)
 
   // Basispreise für verschiedene Vertragstypen
   const basePrices = {
@@ -36,22 +39,43 @@ const PaymentModule = ({
 
   const basePrice = basePrices[contractType] || 12.90
 
-  // Fallback-Addons wenn keine geladen werden können
-  const fallbackAddons = [
-    { addon_key: 'explanations', price: 9.90 },
-    { addon_key: 'handover_protocol', price: 7.90 },
-    { addon_key: 'legal_review', price: 29.90 }
-  ]
+  // Addons laden beim Mount oder wenn contractType ändert
+  useEffect(() => {
+    const loadAddons = async () => {
+      try {
+        const response = await getAddonsByContractType(contractType)
+        if (response.success) {
+          setAddons(response.data || [])
+        } else {
+          console.warn('Addon loading failed:', response.error)
+          setAddons([])
+        }
+      } catch (error) {
+        console.error('Error loading addons:', error)
+        setAddons([])
+      } finally {
+        setAddonsLoaded(true)
+      }
+    }
 
-  // Dynamische Preisberechnung
+    if (contractType) {
+      loadAddons()
+    }
+  }, [contractType])
+
+  // Dynamische Preisberechnung basierend auf aktuellen Addons
   const calculatedAmount = useMemo(() => {
+    if (!addonsLoaded) {
+      return propAmount || basePrice // Fallback während Laden
+    }
+
     const addonTotal = selectedAddons.reduce((sum, addonKey) => {
-      const addon = fallbackAddons.find(a => a.addon_key === addonKey)
+      const addon = addons.find(a => a.addon_key === addonKey)
       return sum + (addon?.price || 0)
     }, 0)
 
     return basePrice + addonTotal
-  }, [basePrice, selectedAddons])
+  }, [basePrice, selectedAddons, addons, addonsLoaded, propAmount])
 
   // Amount für Display formatieren
   const displayAmount = calculatedAmount.toFixed(2)
@@ -214,197 +238,3 @@ const PaymentModule = ({
               <Download className="h-4 w-4 mr-2" />
               PDF herunterladen
             </button>
-            {customerEmail && (
-              <p className="text-sm text-green-600 flex items-center justify-center">
-                <Mail className="h-4 w-4 mr-2" />
-                Kopie wurde an {customerEmail} gesendet
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  if (paymentStatus === 'error') {
-    return (
-      <div className={`bg-red-50 border-2 border-red-200 rounded-lg p-6 ${className}`}>
-        <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-red-800 mb-2">Zahlung fehlgeschlagen</h3>
-        <p className="text-red-700 mb-4">{errorMessage}</p>
-        <button
-          onClick={() => {
-            setPaymentStatus('idle')
-            setErrorMessage('')
-          }}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
-        >
-          Erneut versuchen
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className={`bg-white rounded-lg shadow-lg border border-gray-200 ${className}`}>
-      {/* Header mit dynamischem Preis */}
-      <div className="bg-blue-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
-          <span>💳 Bezahlung</span>
-          <span className="text-xl font-bold text-blue-600">
-            {formatAmount(displayAmount)} {currency}
-          </span>
-        </h3>
-      </div>
-
-      <div className="p-6 space-y-6">
-        {/* Preisaufschlüsselung */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-3">Bestellübersicht</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Basis-Vertrag ({contractType}):</span>
-              <span>{formatAmount(basePrice)} {currency}</span>
-            </div>
-            
-            {selectedAddons.length > 0 && selectedAddons.map(addonKey => {
-              const addon = fallbackAddons.find(a => a.addon_key === addonKey)
-              return addon ? (
-                <div key={addonKey} className="flex justify-between text-blue-600">
-                  <span>+ {addonKey.replace('_', ' ')}:</span>
-                  <span>+{formatAmount(addon.price)} {currency}</span>
-                </div>
-              ) : null
-            })}
-            
-            <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-base">
-              <span>Gesamtpreis:</span>
-              <span>{formatAmount(displayAmount)} {currency}</span>
-            </div>
-            <div className="text-xs text-gray-600">inkl. 19% MwSt.</div>
-          </div>
-        </div>
-
-        {/* E-Mail Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            E-Mail für Vertragszustellung *
-          </label>
-          <input
-            type="email"
-            value={customerEmail}
-            readOnly
-            placeholder="ihre@email.de"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-          />
-          <p className="text-xs text-gray-600 mt-1">
-            Ihr fertiger Vertrag wird an diese Adresse gesendet
-          </p>
-        </div>
-
-        {/* Payment Method Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Zahlungsart wählen
-          </label>
-          <div className="space-y-2">
-            {paymentMethods
-              .filter(method => enabledMethods.includes(method.id))
-              .map((method) => {
-                const IconComponent = method.icon
-                return (
-                  <div
-                    key={method.id}
-                    className={`
-                      cursor-pointer p-4 rounded-lg border-2 transition-all duration-200
-                      ${selectedMethod === method.id
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-gray-300'
-                      }
-                    `}
-                    onClick={() => setSelectedMethod(method.id)}
-                  >
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 mr-3">
-                        <IconComponent className="h-5 w-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{method.name}</h4>
-                        <p className="text-sm text-gray-600">{method.description}</p>
-                      </div>
-                      <div className={`
-                        h-4 w-4 rounded-full border-2 flex items-center justify-center
-                        ${selectedMethod === method.id
-                          ? 'border-blue-500 bg-blue-500'
-                          : 'border-gray-300'
-                        }
-                      `}>
-                        {selectedMethod === method.id && (
-                          <div className="h-2 w-2 bg-white rounded-full" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-          </div>
-        </div>
-
-        {/* Security Badge */}
-        {showSecurityBadge && (
-          <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-            <Lock className="h-4 w-4" />
-            <span>SSL-verschlüsselt & sicher</span>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {errorMessage && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="flex items-center">
-              <AlertCircle className="h-4 w-4 text-red-600 mr-2" />
-              <span className="text-sm text-red-700">{errorMessage}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Payment Button */}
-        <button
-          onClick={handlePaymentSubmit}
-          disabled={isProcessing || !customerEmail?.trim()}
-          className={`
-            w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-200
-            ${isProcessing || !customerEmail?.trim()
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
-            }
-          `}
-        >
-          {isProcessing ? (
-            <div className="flex items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              Verarbeite Zahlung...
-            </div>
-          ) : (
-            `Jetzt ${formatAmount(displayAmount)} ${currency} bezahlen`
-          )}
-        </button>
-
-        {/* Legal Text */}
-        <div className="text-xs text-gray-500 text-center space-y-1">
-          <p>
-            Mit dem Klick auf "Bezahlen" akzeptieren Sie unsere{' '}
-            <a href="/agb" className="text-blue-600 hover:underline">AGB</a>{' '}
-            und{' '}
-            <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzerklärung</a>
-          </p>
-          <p>
-            Ihr Vertrag wird nach erfolgreicher Zahlung automatisch generiert und per E-Mail zugestellt.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default PaymentModule
