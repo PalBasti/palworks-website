@@ -5,15 +5,27 @@ import Link from 'next/link'
 import { FileText, ArrowLeft, CheckCircle, Download, Mail } from 'lucide-react'
 import UntermietvertragForm from '../components/UntermietvertragForm'
 import PaymentModule from '../components/modules/PaymentModule'
+// ✅ NEUE MODULARE IMPORTS
+import PricingSection from '../components/shared/PricingSection'
+import { useContractForm } from '../hooks/useContractForm'
 
 export default function UntermietvertragPage() {
   const [currentStep, setCurrentStep] = useState('form') // form, preview, success
-  const [contractData, setContractData] = useState(null)
   const [paymentResult, setPaymentResult] = useState(null)
+
+  // ✅ VERWENDE MODULAREN HOOK
+  const {
+    formData: contractData,
+    selectedAddons,
+    totalPrice,
+    handleInputChange,
+    handleAddonChange,
+    updateFormData
+  } = useContractForm('untermietvertrag', 12.90)
 
   const handleFormSubmit = (data) => {
     console.log('📋 Form submitted with data:', data)
-    setContractData(data)
+    updateFormData(data)
     setCurrentStep('preview')
   }
 
@@ -32,16 +44,8 @@ export default function UntermietvertragPage() {
     alert('Zahlung fehlgeschlagen: ' + error.message)
   }
 
-  const getPrice = () => {
-    let basePrice = 12.90
-    if (contractData?.selected_addons?.includes('protocol')) {
-      basePrice += 4.90
-    }
-    return basePrice.toFixed(2)
-  }
-
   const getSelectedAddons = () => {
-    return contractData?.selected_addons || []
+    return selectedAddons || []
   }
 
   return (
@@ -139,6 +143,18 @@ export default function UntermietvertragPage() {
                     </div>
                   </div>
 
+                  {/* ✅ NEUE MODULARE PRICING SECTION */}
+                  <div className="mt-6 pt-6 border-t">
+                    <PricingSection
+                      contractType="untermietvertrag"
+                      basePrice={12.90}
+                      selectedAddons={selectedAddons}
+                      onAddonChange={handleAddonChange}
+                      showTitle={false}
+                      compact={true}
+                    />
+                  </div>
+
                   {/* Zusätzliche Services */}
                   <div className="mt-6 pt-6 border-t">
                     <h4 className="font-semibold text-gray-900 mb-3">Enthaltene Services</h4>
@@ -155,7 +171,7 @@ export default function UntermietvertragPage() {
                         <CheckCircle className="h-4 w-4 mr-2" />
                         <span className="text-sm">E-Mail-Versand an {contractData.customer_email}</span>
                       </div>
-                      {contractData.selected_addons?.includes('protocol') && (
+                      {selectedAddons?.includes('protocol') && (
                         <div className="flex items-center text-green-600">
                           <CheckCircle className="h-4 w-4 mr-2" />
                           <span className="text-sm">Professionelles Übergabeprotokoll</span>
@@ -180,7 +196,7 @@ export default function UntermietvertragPage() {
                     contractType="untermietvertrag"
                     formData={contractData}
                     selectedAddons={getSelectedAddons()}
-                    amount={getPrice()}
+                    amount={totalPrice.toFixed(2)}
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentError={handlePaymentError}
                     customerEmail={contractData.customer_email}
