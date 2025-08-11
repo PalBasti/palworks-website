@@ -66,6 +66,8 @@ async function generatePDFForContract(contractType, formData, selectedAddons) {
   }
 }
 
+// FIX für send-contract-email.js - NUR diese Funktion ersetzen:
+
 async function sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer) {
   try {
     const contractTypeNames = {
@@ -76,6 +78,17 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
 
     const typeName = contractTypeNames[contractType] || contractType;
     const filename = `${typeName}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+    // 🔧 FIX: ArrayBuffer zu Buffer konvertieren
+    const nodeBuffer = Buffer.from(pdfBuffer);
+    
+    console.log('🔍 PDF Buffer Debug:', {
+      originalType: Object.prototype.toString.call(pdfBuffer),
+      originalSize: pdfBuffer.byteLength || pdfBuffer.length,
+      bufferType: Object.prototype.toString.call(nodeBuffer),
+      bufferSize: nodeBuffer.length,
+      isBuffer: Buffer.isBuffer(nodeBuffer)
+    });
 
     // E-Mail-Template mit professionellem Design
     const htmlTemplate = `
@@ -160,7 +173,7 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
       attachments: [
         {
           filename: filename,
-          content: pdfBuffer,
+          content: nodeBuffer, // 🔧 FIX: Verwende Buffer statt ArrayBuffer
           contentType: 'application/pdf'
         }
       ]
@@ -180,7 +193,6 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
     throw error;
   }
 }
-
 export default async function handler(req, res) {
   // CORS Headers für Debugging
   res.setHeader('Access-Control-Allow-Origin', '*');
