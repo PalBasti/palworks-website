@@ -1,5 +1,5 @@
 // pages/test-modular.js - INTEGRATION TEST DER MODULAREN KOMPONENTEN
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
 
 // Import unserer modularen Komponenten (nur wenn sie existieren)
