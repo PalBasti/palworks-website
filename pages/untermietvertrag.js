@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Stepper } from '@/components/ui/stepper'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, FileText, Mail, AlertCircle } from 'lucide-react'
-import UntermietvertragForm from '@/components/forms/UntermietvertragForm'
+import UntermietvertragForm from '@/components/UntermietvertragForm'
 import PaymentModule from '@/components/modules/PaymentModule'
 import PricingSection from '@/components/shared/PricingSection'
 
