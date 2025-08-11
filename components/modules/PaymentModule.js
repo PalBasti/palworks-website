@@ -1,11 +1,10 @@
-// components/modules/PaymentModule.js - KORRIGIERTE VERSION mit dynamischer Preisberechnung
+// components/modules/PaymentModule.js - VOLLSTÄNDIGE KORRIGIERTE VERSION
 
 import { useState, useEffect, useMemo } from 'react'
 import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail, Loader2 } from 'lucide-react'
-import { getAddonsByContractType } from '@/lib/supabase/addonService'
 
 const PaymentModule = ({
-  amount: propAmount, // Prop amount als Fallback
+  amount: propAmount,
   currency = "€",
   orderDescription = "PalWorks Vertragserstellung",
   customerEmail = "",
@@ -25,8 +24,6 @@ const PaymentModule = ({
   const [errorMessage, setErrorMessage] = useState('')
   const [pdfUrl, setPdfUrl] = useState(null)
   const [contractId, setContractId] = useState(null)
-  const [addons, setAddons] = useState([])
-  const [addonsLoaded, setAddonsLoaded] = useState(false)
 
   // Basispreise für verschiedene Vertragstypen
   const basePrices = {
@@ -39,43 +36,22 @@ const PaymentModule = ({
 
   const basePrice = basePrices[contractType] || 12.90
 
-  // Addons laden beim Mount oder wenn contractType ändert
-  useEffect(() => {
-    const loadAddons = async () => {
-      try {
-        const response = await getAddonsByContractType(contractType)
-        if (response.success) {
-          setAddons(response.data || [])
-        } else {
-          console.warn('Addon loading failed:', response.error)
-          setAddons([])
-        }
-      } catch (error) {
-        console.error('Error loading addons:', error)
-        setAddons([])
-      } finally {
-        setAddonsLoaded(true)
-      }
-    }
+  // Fallback-Addons wenn keine geladen werden können
+  const fallbackAddons = [
+    { addon_key: 'explanations', price: 9.90 },
+    { addon_key: 'handover_protocol', price: 7.90 },
+    { addon_key: 'legal_review', price: 29.90 }
+  ]
 
-    if (contractType) {
-      loadAddons()
-    }
-  }, [contractType])
-
-  // Dynamische Preisberechnung basierend auf aktuellen Addons
+  // Dynamische Preisberechnung
   const calculatedAmount = useMemo(() => {
-    if (!addonsLoaded) {
-      return propAmount || basePrice // Fallback während Laden
-    }
-
     const addonTotal = selectedAddons.reduce((sum, addonKey) => {
-      const addon = addons.find(a => a.addon_key === addonKey)
+      const addon = fallbackAddons.find(a => a.addon_key === addonKey)
       return sum + (addon?.price || 0)
     }, 0)
 
     return basePrice + addonTotal
-  }, [basePrice, selectedAddons, addons, addonsLoaded, propAmount])
+  }, [basePrice, selectedAddons])
 
   // Amount für Display formatieren
   const displayAmount = calculatedAmount.toFixed(2)
@@ -275,16 +251,9 @@ const PaymentModule = ({
       <div className="bg-blue-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center justify-between">
           <span>💳 Bezahlung</span>
-          {!addonsLoaded ? (
-            <div className="flex items-center text-sm text-gray-600">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Berechne...
-            </div>
-          ) : (
-            <span className="text-xl font-bold text-blue-600">
-              {formatAmount(displayAmount)} {currency}
-            </span>
-          )}
+          <span className="text-xl font-bold text-blue-600">
+            {formatAmount(displayAmount)} {currency}
+          </span>
         </h3>
       </div>
 
@@ -298,11 +267,11 @@ const PaymentModule = ({
               <span>{formatAmount(basePrice)} {currency}</span>
             </div>
             
-            {selectedAddons.length > 0 && addons.length > 0 && selectedAddons.map(addonKey => {
-              const addon = addons.find(a => a.addon_key === addonKey)
+            {selectedAddons.length > 0 && selectedAddons.map(addonKey => {
+              const addon = fallbackAddons.find(a => a.addon_key === addonKey)
               return addon ? (
                 <div key={addonKey} className="flex justify-between text-blue-600">
-                  <span>+ {addon.name}:</span>
+                  <span>+ {addonKey.replace('_', ' ')}:</span>
                   <span>+{formatAmount(addon.price)} {currency}</span>
                 </div>
               ) : null
@@ -324,15 +293,9 @@ const PaymentModule = ({
           <input
             type="email"
             value={customerEmail}
-            onChange={(e) => {
-              // Update über parent component
-              if (formData && typeof formData === 'object') {
-                formData.customer_email = e.target.value
-              }
-            }}
+            readOnly
             placeholder="ihre@email.de"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
           />
           <p className="text-xs text-gray-600 mt-1">
             Ihr fertiger Vertrag wird an diese Adresse gesendet
@@ -408,10 +371,10 @@ const PaymentModule = ({
         {/* Payment Button */}
         <button
           onClick={handlePaymentSubmit}
-          disabled={isProcessing || !customerEmail?.trim() || !addonsLoaded}
+          disabled={isProcessing || !customerEmail?.trim()}
           className={`
             w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-200
-            ${isProcessing || !customerEmail?.trim() || !addonsLoaded
+            ${isProcessing || !customerEmail?.trim()
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
             }
@@ -443,3 +406,5 @@ const PaymentModule = ({
     </div>
   )
 }
+
+export default PaymentModule
