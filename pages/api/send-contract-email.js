@@ -1,5 +1,4 @@
-// pages/api/send-contract-email.js - VOLLSTÄNDIGE KORRIGIERTE VERSION
-const nodemailer = require('nodemailer'); // ✅ STATISCHER IMPORT
+// pages/api/send-contract-email.js - WORKING VERSION (basierend auf erfolgreichem Test)
 
 async function createGmailTransporter() {
   try {
@@ -9,7 +8,9 @@ async function createGmailTransporter() {
       user: process.env.GMAIL_SMTP_USER
     });
 
-    const transporter = nodemailer.createTransporter({
+    // ✅ EXAKT DIESELBE METHODE WIE IM ERFOLGREICHEN TEST
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 587,
@@ -181,6 +182,15 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
 }
 
 export default async function handler(req, res) {
+  // CORS Headers für Debugging
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Nur POST-Requests erlauben
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -193,7 +203,8 @@ export default async function handler(req, res) {
       email,
       contractType,
       hasFormData: !!formData,
-      selectedAddons
+      selectedAddons,
+      timestamp: new Date().toISOString()
     });
 
     // Input-Validierung
@@ -219,14 +230,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ 
         success: true, 
         message: 'Gmail connection successful',
-        debug: true
+        debug: true,
+        timestamp: new Date().toISOString()
       });
     }
 
     // Gmail Transporter erstellen
+    console.log('🔧 Creating Gmail transporter...');
     const transporter = await createGmailTransporter();
+    console.log('✅ Transporter created successfully');
 
     // PDF generieren
+    console.log('📄 Generating PDF...');
     const pdfBuffer = await generatePDFForContract(contractType, formData, selectedAddons);
     
     if (!pdfBuffer) {
@@ -239,27 +254,32 @@ export default async function handler(req, res) {
     });
 
     // E-Mail mit PDF versenden
+    console.log('📧 Sending email...');
     const emailResult = await sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer);
+    console.log('✅ Email sent successfully');
 
     // Erfolgreiche Antwort
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'E-Mail erfolgreich versendet',
       messageId: emailResult.messageId,
       filename: emailResult.filename,
       recipient: email,
-      contractType: contractType
+      contractType: contractType,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
     console.error('❌ E-Mail-Versand Fehler:', error);
+    console.error('❌ Error stack:', error.stack);
     
-    // Fehler-Antwort
-    res.status(500).json({
+    // Detaillierte Fehler-Antwort
+    return res.status(500).json({
       success: false,
       error: 'E-Mail-Versand fehlgeschlagen',
       details: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      errorType: error.constructor.name
     });
   }
 }
