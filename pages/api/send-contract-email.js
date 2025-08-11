@@ -1,366 +1,265 @@
-// pages/api/send-contract-email.js - VERCEL SERVERLESS KOMPATIBEL
-import { generateAndReturnPDF } from '../../lib/pdf/untermietvertragGenerator'
+// pages/api/send-contract-email.js - KORRIGIERTE VERSION
+const nodemailer = require('nodemailer'); // ✅ STATISCHER IMPORT
 
-// ✅ ZURÜCK ZUR FUNKTIONIERENDEN REQUIRE() LÖSUNG
-const createGmailTransporter = async () => {
-  const nodemailer = require('nodemailer');
-  
-  return nodemailer.createTransporter({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.GMAIL_SMTP_USER,
-      pass: process.env.GMAIL_SMTP_PASS
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  })
-}
-
-// ✅ GARAGENVERTRAG-SPEZIFISCHES E-MAIL-TEMPLATE
-const createGarageEmailTemplate = (formData, selectedAddons = []) => {
-  const garageType = formData.garage_type === 'garage' ? 'Garage' : 'Stellplatz'
-  const contractTitle = `${garageType}mietvertrag`
-  
-  // Addon-Details für E-Mail
-  const addonDetails = selectedAddons.map(addonId => {
-    switch(addonId) {
-      case 'explanations':
-        return '📋 Rechtliche Erläuterungen - Verständliche Rechtstexte und Vermieter-/Mieterrechte'
-      case 'handover_protocol':
-        return '✅ Übergabeprotokoll - Zustandsdokumentation und Schlüsselübergabe'
-      default:
-        return `➕ ${addonId}`
-    }
-  }).join('<br>')
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Ihr ${contractTitle} von PalWorks</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      
-      <!-- Header -->
-      <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
-        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🎉 Ihr ${contractTitle} ist bereit!</h1>
-        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
-          Rechtssicher • Professionell • Sofort einsatzbereit
-        </p>
-      </div>
-
-      <!-- Bestätigung -->
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #28a745;">
-        <h2 style="color: #28a745; margin: 0 0 15px 0; font-size: 20px;">✅ Payment erfolgreich</h2>
-        <p style="margin: 0; font-size: 16px;">
-          Vielen Dank für Ihr Vertrauen! Ihr ${contractTitle} wurde erfolgreich erstellt und 
-          ist als PDF-Anhang beigefügt.
-        </p>
-      </div>
-
-      <!-- Vertragsdetails -->
-      <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-        <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">
-          📋 Ihre Vertragsdetails
-        </h3>
-        
-        <div style="margin-bottom: 15px;">
-          <strong style="color: #6c757d;">Mietobjekt:</strong><br>
-          ${garageType}${formData.garage_number ? ` Nr. ${formData.garage_number}` : ''}<br>
-          ${formData.garage_same_address ? 
-            (formData.landlord_address || '[Adresse vom Vermieter]') : 
-            (formData.garage_address ? `${formData.garage_address}, ${formData.garage_postal} ${formData.garage_city}` : '[Garage-Adresse]')
-          }
-        </div>
-
-        <div style="margin-bottom: 15px;">
-          <strong style="color: #6c757d;">Parteien:</strong><br>
-          <strong>Vermieter:</strong> ${formData.landlord_name || '[Name Vermieter]'}<br>
-          <strong>Mieter:</strong> ${formData.tenant_name || '[Name Mieter]'}
-        </div>
-
-        <div style="margin-bottom: 15px;">
-          <strong style="color: #6c757d;">Mietkonditionen:</strong><br>
-          <strong>Monatliche Miete:</strong> ${formData.rent ? `${formData.rent} EUR` : '[Betrag] EUR'}<br>
-          <strong>Mietbeginn:</strong> ${formData.start_date || '[Datum]'}<br>
-          <strong>Laufzeit:</strong> ${formData.garage_lease_type === 'befristet' ? 
-            `Befristet bis ${formData.end_date || '[Datum]'}` : 'Unbefristet'
-          }
-        </div>
-
-        ${selectedAddons.length > 0 ? `
-          <div style="margin-bottom: 15px;">
-            <strong style="color: #6c757d;">Zusätzliche Services:</strong><br>
-            ${addonDetails}
-          </div>
-        ` : ''}
-      </div>
-
-      <!-- Nächste Schritte -->
-      <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-        <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 18px;">📋 Nächste Schritte</h3>
-        <ol style="margin: 0; padding-left: 20px; color: #856404;">
-          <li style="margin-bottom: 8px;"><strong>PDF prüfen:</strong> Überprüfen Sie alle Angaben im angehängten Vertrag</li>
-          <li style="margin-bottom: 8px;"><strong>Ausdrucken:</strong> Drucken Sie den Vertrag für die Unterschriften aus</li>
-          <li style="margin-bottom: 8px;"><strong>Unterzeichnen:</strong> Lassen Sie beide Parteien den Vertrag unterschreiben</li>
-          <li style="margin-bottom: 8px;"><strong>Aufbewahren:</strong> Bewahren Sie eine Kopie für Ihre Unterlagen auf</li>
-        </ol>
-      </div>
-
-      <!-- Support -->
-      <div style="background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-        <h3 style="color: #1565c0; margin: 0 0 15px 0; font-size: 18px;">💬 Fragen oder Probleme?</h3>
-        <p style="margin: 0; color: #1565c0;">
-          Unser Support-Team hilft Ihnen gerne weiter:<br>
-          📧 <a href="mailto:support@palworks.de" style="color: #1565c0;">support@palworks.de</a><br>
-          🌐 <a href="https://palworks.de" style="color: #1565c0;">palworks.de</a>
-        </p>
-      </div>
-
-      <!-- Footer -->
-      <div style="text-align: center; padding: 20px; border-top: 1px solid #dee2e6; color: #6c757d;">
-        <p style="margin: 0 0 10px 0; font-size: 14px;">
-          <strong>PalWorks - Rechtssichere Verträge</strong><br>
-          Ihr Partner für professionelle Do-it-yourself-Verträge
-        </p>
-        <p style="margin: 0; font-size: 12px;">
-          Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht direkt auf diese E-Mail.
-        </p>
-      </div>
-
-    </body>
-    </html>
-  `
-}
-
-// ✅ UNTERMIETVERTRAG E-MAIL-TEMPLATE (Original beibehalten)
-const createContractEmailTemplate = (formData, contractType, selectedAddons = []) => {
-  const addonDetails = selectedAddons.map(addonId => {
-    switch(addonId) {
-      case 'protocol':
-        return '📋 Übergabeprotokoll - Professionelle Zustandsdokumentation'
-      case 'explanations':
-        return '📚 Rechtliche Erläuterungen - Verständliche Rechtstexte'
-      default:
-        return `➕ ${addonId}`
-    }
-  }).join('<br>')
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Ihr Untermietvertrag von PalWorks</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      
-      <!-- Header -->
-      <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
-        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🎉 Ihr Untermietvertrag ist bereit!</h1>
-        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">
-          Rechtssicher • Professionell • Sofort einsatzbereit
-        </p>
-      </div>
-
-      <!-- Bestätigung -->
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #28a745;">
-        <h2 style="color: #28a745; margin: 0 0 15px 0; font-size: 20px;">✅ Payment erfolgreich</h2>
-        <p style="margin: 0; font-size: 16px;">
-          Vielen Dank für Ihr Vertrauen! Ihr Untermietvertrag wurde erfolgreich erstellt und 
-          ist als PDF-Anhang beigefügt.
-        </p>
-      </div>
-
-      <!-- Vertragsdetails -->
-      <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-        <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">
-          📋 Ihre Vertragsdetails
-        </h3>
-        
-        <div style="margin-bottom: 15px;">
-          <strong style="color: #6c757d;">Mietobjekt:</strong><br>
-          ${formData.property_address || '[Adresse]'}, ${formData.property_postal || '[PLZ]'} ${formData.property_city || '[Stadt]'}
-        </div>
-
-        <div style="margin-bottom: 15px;">
-          <strong style="color: #6c757d;">Parteien:</strong><br>
-          <strong>Hauptmieter:</strong> ${formData.landlord_name || '[Name Hauptmieter]'}<br>
-          <strong>Untermieter:</strong> ${formData.tenant_name || '[Name Untermieter]'}
-        </div>
-
-        <div style="margin-bottom: 15px;">
-          <strong style="color: #6c757d;">Mietkonditionen:</strong><br>
-          <strong>Monatliche Miete:</strong> ${formData.rent_amount ? `${formData.rent_amount} EUR` : '[Betrag] EUR'}<br>
-          <strong>Mietbeginn:</strong> ${formData.start_date || '[Datum]'}<br>
-          <strong>Laufzeit:</strong> ${formData.contract_type === 'fixed_term' ? 
-            `Befristet bis ${formData.end_date || '[Datum]'}` : 'Unbefristet'
-          }
-        </div>
-
-        ${selectedAddons.length > 0 ? `
-          <div style="margin-bottom: 15px;">
-            <strong style="color: #6c757d;">Zusätzliche Services:</strong><br>
-            ${addonDetails}
-          </div>
-        ` : ''}
-      </div>
-
-      <!-- Footer -->
-      <div style="text-align: center; padding: 20px; border-top: 1px solid #dee2e6; color: #6c757d;">
-        <p style="margin: 0 0 10px 0; font-size: 14px;">
-          <strong>PalWorks - Rechtssichere Verträge</strong><br>
-          Ihr Partner für professionelle Do-it-yourself-Verträge
-        </p>
-        <p style="margin: 0; font-size: 12px;">
-          Diese E-Mail wurde automatisch generiert.
-        </p>
-      </div>
-      
-    </body>
-    </html>
-  `
-}
-
-// E-Mail versenden mit Gmail SMTP
-const sendEmailWithGmail = async (to, subject, htmlContent, pdfBuffer = null, filename = 'Vertrag.pdf') => {
-  const transporter = await createGmailTransporter()
-
-  const mailOptions = {
-    from: {
-      name: 'PalWorks - Rechtssichere Verträge',
-      address: process.env.GMAIL_SMTP_USER
-    },
-    to: to,
-    replyTo: process.env.GMAIL_REPLY_TO,
-    subject: subject,
-    html: htmlContent,
-    attachments: pdfBuffer ? [{
-      filename: filename,
-      content: pdfBuffer,
-      contentType: 'application/pdf'
-    }] : []
-  }
-
+async function createGmailTransporter() {
   try {
-    console.log('📧 Sende E-Mail via Gmail SMTP...')
-    const result = await transporter.sendMail(mailOptions)
-    console.log('✅ E-Mail erfolgreich gesendet:', result.messageId)
+    console.log('🔍 Gmail Environment Debug:', {
+      hasUser: !!process.env.GMAIL_SMTP_USER,
+      passLength: process.env.GMAIL_SMTP_PASS?.length,
+      user: process.env.GMAIL_SMTP_USER
+    });
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.GMAIL_SMTP_USER,
+        pass: process.env.GMAIL_SMTP_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+
+    // Verbindung testen
+    await transporter.verify();
+    console.log('✅ Gmail SMTP Verbindung erfolgreich!');
     
-    return { 
-      success: true, 
-      data: { id: result.messageId },
-      provider: 'gmail-smtp'
+    return transporter;
+  } catch (error) {
+    console.error('❌ Gmail SMTP Verbindung fehlgeschlagen:', error.message);
+    throw error;
+  }
+}
+
+async function generatePDFForContract(contractType, formData, selectedAddons) {
+  try {
+    console.log('🔄 Generiere ' + contractType + '-PDF...');
+    console.log('🔍 === PDF API ENTRY POINT ===');
+    console.log('🔍 Received selectedAddons:', selectedAddons);
+    console.log('🔍 Addons type:', typeof selectedAddons, Array.isArray(selectedAddons));
+    console.log('🔍 Return type: arraybuffer');
+    console.log('🔍 === CALLING PDF GENERATOR ===');
+
+    switch (contractType) {
+      case 'untermietvertrag':
+        const { generateAndReturnPDF } = await import('../../lib/pdf/untermietvertragGenerator');
+        return await generateAndReturnPDF(formData, selectedAddons, 'arraybuffer');
+      
+      case 'garagenvertrag':
+        const { generateAndReturnGaragePDF } = await import('../../lib/pdf/garagenvertragGenerator');
+        return await generateAndReturnGaragePDF(formData, selectedAddons, 'arraybuffer');
+      
+      case 'wg-untermietvertrag':
+        const { generateAndReturnWGPDF } = await import('../../lib/pdf/wgUntermietvertragGenerator');
+        return await generateAndReturnWGPDF(formData, selectedAddons, 'arraybuffer');
+      
+      default:
+        throw new Error(`Unbekannter Vertragstyp: ${contractType}`);
     }
   } catch (error) {
-    console.error('❌ Gmail SMTP Fehler:', error)
-    throw new Error(`Gmail SMTP failed: ${error.message}`)
+    console.error('❌ PDF-Generierung fehlgeschlagen:', error);
+    throw error;
+  }
+}
+
+async function sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer) {
+  try {
+    const contractTypeNames = {
+      'untermietvertrag': 'Untermietvertrag',
+      'garagenvertrag': 'Garagenmietvertrag', 
+      'wg-untermietvertrag': 'WG-Untermietvertrag'
+    };
+
+    const typeName = contractTypeNames[contractType] || contractType;
+    const filename = `${typeName}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+    // E-Mail-Template mit professionellem Design
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background: #f9f9f9; }
+        .contract-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .footer { background: #333; color: white; padding: 20px; text-align: center; font-size: 14px; }
+        .success-icon { font-size: 48px; margin-bottom: 20px; }
+        .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #4caf50; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="success-icon">✅</div>
+        <h1>Ihr ${typeName} ist bereit!</h1>
+        <p>Vielen Dank für Ihren Kauf bei PalWorks</p>
+      </div>
+      
+      <div class="content">
+        <p>Liebe/r ${formData.tenant_name || formData.mieter_name || 'Kunde/Kundin'},</p>
+        
+        <p>Ihr ${typeName} wurde erfolgreich generiert und ist als PDF-Anhang beigefügt.</p>
+        
+        <div class="highlight">
+          <strong>✅ Zahlung erfolgreich verarbeitet</strong><br>
+          <strong>✅ PDF automatisch generiert</strong><br>
+          <strong>✅ E-Mail-Kopie versendet</strong>
+        </div>
+
+        <div class="contract-details">
+          <h3>📋 Vertragsdetails</h3>
+          <p><strong>Vertragstyp:</strong> ${typeName}</p>
+          ${formData.property_address ? `<p><strong>Objekt:</strong> ${formData.property_address}</p>` : ''}
+          ${formData.rent_amount ? `<p><strong>Miete:</strong> ${formData.rent_amount} €</p>` : ''}
+          ${formData.start_date ? `<p><strong>Mietbeginn:</strong> ${new Date(formData.start_date).toLocaleDateString('de-DE')}</p>` : ''}
+        </div>
+
+        <h3>📎 Im Anhang finden Sie:</h3>
+        <ul>
+          <li>✅ Ihren vollständigen, rechtssicheren ${typeName}</li>
+          <li>✅ Bereits ausgefüllt mit Ihren Daten</li>
+          <li>✅ Bereit zum Unterschreiben</li>
+        </ul>
+
+        <h3>🔍 Nächste Schritte:</h3>
+        <ol>
+          <li>PDF-Datei herunterladen und prüfen</li>
+          <li>Vertrag ausdrucken (2 Exemplare)</li>
+          <li>Von beiden Parteien unterschreiben lassen</li>
+          <li>Je ein Exemplar für Vermieter und Mieter</li>
+        </ol>
+
+        <div class="highlight">
+          <strong>💡 Wichtiger Hinweis:</strong> Bewahren Sie diese E-Mail und das PDF sicher auf. 
+          Bei Fragen können Sie sich jederzeit an uns wenden.
+        </div>
+      </div>
+      
+      <div class="footer">
+        <p><strong>PalWorks - Rechtssichere Verträge leicht gemacht</strong></p>
+        <p>📧 Support: support@palworks.de | 🌐 www.palworks.de</p>
+        <p>Vielen Dank für Ihr Vertrauen!</p>
+      </div>
+    </body>
+    </html>`;
+
+    const mailOptions = {
+      from: {
+        name: 'PalWorks',
+        address: process.env.GMAIL_SMTP_USER
+      },
+      to: email,
+      replyTo: process.env.GMAIL_REPLY_TO || 'support@palworks.de',
+      subject: `✅ Ihr ${typeName} von PalWorks - PDF im Anhang`,
+      html: htmlTemplate,
+      attachments: [
+        {
+          filename: filename,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
+    };
+
+    console.log('📧 Sende E-Mail...');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ E-Mail erfolgreich gesendet:', result.messageId);
+    
+    return {
+      success: true,
+      messageId: result.messageId,
+      filename: filename
+    };
+  } catch (error) {
+    console.error('❌ E-Mail-Versand fehlgeschlagen:', error);
+    throw error;
   }
 }
 
 export default async function handler(req, res) {
+  // Nur POST-Requests erlauben
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { email, contractType, formData, selectedAddons } = req.body
+    const { email, contractType, formData, selectedAddons = [], debugOnly = false } = req.body;
 
     console.log('🔍 E-Mail-Versand Request:', {
       email,
       contractType,
       hasFormData: !!formData,
-      selectedAddons: selectedAddons || []
-    })
+      selectedAddons
+    });
 
-    // Validierung
-    if (!email || !formData || !contractType) {
+    // Input-Validierung
+    if (!email || !contractType || !formData) {
       return res.status(400).json({ 
-        error: 'Fehlende Daten',
-        details: 'E-Mail, formData und contractType sind erforderlich' 
-      })
+        error: 'Missing required fields',
+        details: 'email, contractType, and formData are required'
+      });
     }
 
-    let pdfBuffer, htmlContent, subject, filename
-
-    // ✅ VERTRAGSTYP-SPEZIFISCHE VERARBEITUNG
-    switch (contractType) {
-      case 'untermietvertrag':
-        console.log('🔄 Generiere Untermietvertrag-PDF...')
-        pdfBuffer = await generateAndReturnPDF(formData, selectedAddons || [], 'arraybuffer')
-        htmlContent = createContractEmailTemplate(formData, contractType, selectedAddons)
-        subject = 'Ihr Untermietvertrag von PalWorks - Sofort einsatzbereit!'
-        filename = `Untermietvertrag_${new Date().toISOString().slice(0,10)}.pdf`
-        break
-
-      case 'garagenvertrag':
-      case 'garage':
-        console.log('🔄 Generiere Garagenvertrag-PDF...')
-        try {
-          // ✅ VERWENDE NEUEN jsPDF-BASIERTEN GENERATOR
-          const { generateAndReturnGaragePDF } = await import('../../lib/pdf/garagenvertragGenerator')
-          pdfBuffer = await generateAndReturnGaragePDF(formData, selectedAddons || [], 'arraybuffer')
-        } catch (error) {
-          console.warn('⚠️ Garagenvertrag-Generator nicht verfügbar, verwende Fallback')
-          // Fallback: Nutze Untermietvertrag-Generator
-          pdfBuffer = await generateAndReturnPDF(formData, selectedAddons || [], 'arraybuffer')
-        }
-        
-        htmlContent = createGarageEmailTemplate(formData, selectedAddons)
-        const garageType = formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'
-        subject = `Ihr ${garageType}mietvertrag von PalWorks - Sofort einsatzbereit!`
-        filename = `${garageType}mietvertrag_${new Date().toISOString().slice(0,10)}.pdf`
-        break
-
-      default:
-        return res.status(400).json({ 
-          error: 'Unbekannter Vertragstyp',
-          details: `Vertragstyp '${contractType}' wird nicht unterstützt` 
-        })
+    // E-Mail-Format validieren
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format',
+        details: 'Please provide a valid email address'
+      });
     }
 
-    // PDF-Generierung validieren
-    if (!pdfBuffer || pdfBuffer.length === 0) {
-      throw new Error('PDF-Generierung fehlgeschlagen - Buffer ist leer')
+    // Debug-Only Modus für Connection-Tests
+    if (debugOnly) {
+      const transporter = await createGmailTransporter();
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Gmail connection successful',
+        debug: true
+      });
+    }
+
+    // Gmail Transporter erstellen
+    const transporter = await createGmailTransporter();
+
+    // PDF generieren
+    const pdfBuffer = await generatePDFForContract(contractType, formData, selectedAddons);
+    
+    if (!pdfBuffer) {
+      throw new Error('PDF generation returned null/undefined');
     }
 
     console.log('✅ PDF generiert:', {
-      size: `${(pdfBuffer.length / 1024).toFixed(1)} KB`,
-      filename
-    })
+      size: `${Math.round(pdfBuffer.length / 1024)} KB`,
+      filename: `${contractType}_${new Date().toISOString().slice(0,10)}.pdf`
+    });
 
-    // E-Mail senden
-    console.log('📧 Sende E-Mail...')
-    const emailResult = await sendEmailWithGmail(email, subject, htmlContent, pdfBuffer, filename)
+    // E-Mail mit PDF versenden
+    const emailResult = await sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer);
 
-    console.log('✅ E-Mail-Versand erfolgreich:', emailResult)
-
-    return res.status(200).json({
+    // Erfolgreiche Antwort
+    res.status(200).json({
       success: true,
-      message: `${contractType} erfolgreich per E-Mail versendet`,
-      data: {
-        emailResult,
-        contractType,
-        filename,
-        pdfSize: pdfBuffer.length
-      }
-    })
+      message: 'E-Mail erfolgreich versendet',
+      messageId: emailResult.messageId,
+      filename: emailResult.filename,
+      recipient: email,
+      contractType: contractType
+    });
 
   } catch (error) {
-    console.error('❌ E-Mail-Versand Fehler:', error)
+    console.error('❌ E-Mail-Versand Fehler:', error);
     
-    return res.status(500).json({
+    // Fehler-Antwort
+    res.status(500).json({
       success: false,
       error: 'E-Mail-Versand fehlgeschlagen',
       details: error.message,
-      fallback: 'PDF-Download bleibt verfügbar'
-    })
+      timestamp: new Date().toISOString()
+    });
   }
 }
