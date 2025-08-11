@@ -1,7 +1,7 @@
 // components/shared/PricingSection.js - KORRIGIERTE VERSION
 import { useState, useEffect } from 'react';
 import { Check, Plus, FileText, HelpCircle, Loader2 } from 'lucide-react';
-import { getAddonsByContractType } from '@/lib/supabase/addonService';
+import { getAddonsByContractType } from '../lib/supabase/addonService';
 
 export default function PricingSection({ 
   contractType,
