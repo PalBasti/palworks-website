@@ -1,12 +1,12 @@
 // pages/untermietvertrag.js - KORRIGIERTE VERSION mit fixer Preisberechnung
 
 import { useState, useCallback, useMemo } from 'react'
-import { Stepper } from '@/components/ui/stepper'
-import { Button } from '@/components/ui/button'
+import { Stepper } from '../components/ui/stepper'
+import { Button } from '../components/ui/button'
 import { CheckCircle, FileText, Mail, AlertCircle } from 'lucide-react'
-import UntermietvertragForm from '@/components/UntermietvertragForm'
-import PaymentModule from '@/components/modules/PaymentModule'
-import PricingSection from '@/components/shared/PricingSection'
+import UntermietvertragForm from '../components/UntermietvertragForm'
+import PaymentModule from '../components/modules/PaymentModule'
+import PricingSection from '../components/shared/PricingSection'
 
 const steps = [
   { title: 'Vertragsdaten', description: 'Formular ausfüllen' },
