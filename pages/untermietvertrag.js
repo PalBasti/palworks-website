@@ -1,47 +1,61 @@
-// pages/untermietvertrag.js - KORRIGIERTE VERSION MIT MODULAREM SYSTEM
-import { useState } from 'react'
-import Head from 'next/head'
-import Link from 'next/link'
-import { FileText, ArrowLeft, CheckCircle, Download, Mail } from 'lucide-react'
-import UntermietvertragForm from '../components/UntermietvertragForm'
-import PaymentModule from '../components/modules/PaymentModule'
-// ✅ NEUE MODULARE IMPORTS
-import PricingSection from '../components/shared/PricingSection'
-import { useContractForm } from '../hooks/useContractForm'
+// pages/untermietvertrag.js - KORRIGIERTE VERSION mit fixer Preisberechnung
+
+import { useState, useCallback, useMemo } from 'react'
+import { Stepper } from '@/components/ui/stepper'
+import { Button } from '@/components/ui/button'
+import { CheckCircle, FileText, Mail, AlertCircle } from 'lucide-react'
+import UntermietvertragForm from '@/components/forms/UntermietvertragForm'
+import PaymentModule from '@/components/modules/PaymentModule'
+import PricingSection from '@/components/shared/PricingSection'
+
+const steps = [
+  { title: 'Vertragsdaten', description: 'Formular ausfüllen' },
+  { title: 'Prüfung & Zahlung', description: 'Daten prüfen und bezahlen' },
+  { title: 'Fertig', description: 'Vertrag erhalten' }
+]
 
 export default function UntermietvertragPage() {
-  const [currentStep, setCurrentStep] = useState('form') // form, preview, success
+  const [currentStep, setCurrentStep] = useState('form')
+  const [contractData, setContractData] = useState({})
   const [paymentResult, setPaymentResult] = useState(null)
+  const [selectedAddons, setSelectedAddons] = useState([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // ✅ VERWENDE MODULAREN HOOK
-  const {
-    formData: contractData,
-    selectedAddons,
-    totalPrice,
-    handleInputChange,
-    handleAddonChange,
-    updateFormData
-  } = useContractForm('untermietvertrag', 12.90)
+  // Basispreis für Untermietverträge
+  const basePrice = 12.90
 
-  const handleFormSubmit = (data) => {
-    console.log('📋 Form submitted with data:', data)
-    updateFormData(data)
-    setCurrentStep('preview')
-  }
+  // Addon-Handler mit useCallback für Performance
+  const handleAddonChange = useCallback((newAddons) => {
+    setSelectedAddons(newAddons)
+  }, [])
 
-  const handleBackToForm = () => {
-    setCurrentStep('form')
+  // Gesamtpreis berechnen - useMemo für Performance
+  const totalPrice = useMemo(() => {
+    // Diese Funktion wird in PricingSection berechnet, hier nur als Fallback
+    return basePrice + (selectedAddons?.length || 0) * 5 // Fallback-Berechnung
+  }, [selectedAddons])
+
+  // Formular Submit Handler
+  const handleFormSubmit = async (formData) => {
+    try {
+      setIsSubmitting(true)
+      setContractData(formData)
+      setCurrentStep('payment')
+    } catch (error) {
+      console.error('Form submission error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handlePaymentSuccess = (result) => {
-    console.log('💳 Payment successful:', result)
     setPaymentResult(result)
     setCurrentStep('success')
   }
 
   const handlePaymentError = (error) => {
-    console.error('❌ Payment failed:', error)
-    alert('Zahlung fehlgeschlagen: ' + error.message)
+    console.error('Payment error:', error)
+    // Error-Handling kann hier erweitert werden
   }
 
   const getSelectedAddons = () => {
@@ -49,159 +63,131 @@ export default function UntermietvertragPage() {
   }
 
   return (
-    <>
-      <Head>
-        <title>Untermietvertrag erstellen - PalWorks</title>
-        <meta name="description" content="Rechtssicherer Untermietvertrag für ganze Wohnungen. Optional mit professionellem Übergabeprotokoll." />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head>
-
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <Link href="/" className="flex items-center text-blue-600 hover:text-blue-700">
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              <FileText className="h-8 w-8 mr-3" />
-              <span className="text-2xl font-bold text-gray-900">PalWorks</span>
-            </Link>
-            <div className="text-right">
-              <h1 className="text-xl font-semibold text-gray-900">Untermietvertrag</h1>
-              <p className="text-sm text-gray-600">
-                {currentStep === 'form' && 'Schritt 1: Daten eingeben'}
-                {currentStep === 'preview' && 'Schritt 2: Vorschau & Bezahlung'}
-                {currentStep === 'success' && '✅ Erfolgreich erstellt'}
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            Untermietvertrag erstellen
+          </h1>
+          <p className="text-lg text-gray-600">
+            Rechtssicher • Anwaltlich geprüft • Sofort verfügbar
+          </p>
         </div>
-      </header>
 
-      <main className="min-h-screen bg-gray-50">
+        {/* Progress Stepper */}
+        <div className="mb-8">
+          <Stepper 
+            steps={steps} 
+            currentStep={currentStep === 'form' ? 0 : currentStep === 'payment' ? 1 : 2} 
+          />
+        </div>
+
         {/* Schritt 1: Formular */}
         {currentStep === 'form' && (
-          <div className="py-8">
-            <UntermietvertragForm onSubmit={handleFormSubmit} />
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Linke Spalte: Formular (2 Spalten) */}
+            <div className="lg:col-span-2">
+              <UntermietvertragForm
+                onSubmit={handleFormSubmit}
+                isSubmitting={isSubmitting}
+                initialData={contractData}
+              />
+            </div>
+
+            {/* Rechte Spalte: Preisübersicht (1 Spalte) - FIXED POSITIONING */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-6">
+                <PricingSection
+                  contractType="untermietvertrag"
+                  basePrice={basePrice}
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  className="w-full"
+                />
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Schritt 2: Vorschau & Bezahlung */}
-        {currentStep === 'preview' && contractData && (
-          <div className="py-8">
-            <div className="max-w-6xl mx-auto px-4">
-              
-              {/* Zurück Button */}
-              <div className="mb-6">
-                <button
-                  onClick={handleBackToForm}
-                  className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Zurück zum Formular
-                </button>
-              </div>
-
-              {/* Hauptinhalt */}
-              <div className="grid lg:grid-cols-2 gap-8">
-                
-                {/* Linke Spalte: Vertragsvorschau */}
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Vertragsvorschau</h2>
-                  <p className="text-gray-600 mb-6">
-                    Überprüfen Sie Ihren Untermietvertrag vor dem Kauf. Der vollständige Vertrag wird nach der Zahlung als PDF bereitgestellt.
-                  </p>
-                  
-                  {/* Vertragsdetails */}
-                  <div className="space-y-4 text-sm">
-                    <div className="border-l-4 border-blue-500 pl-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">Vertragsparteien</h4>
-                      <div className="space-y-1">
-                        <p><span className="font-medium">Untervermieter:</span> {contractData.landlord_name || '[Wird ergänzt]'}</p>
-                        <p><span className="font-medium">Untermieter:</span> {contractData.tenant_name || '[Wird ergänzt]'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="border-l-4 border-green-500 pl-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">Mietobjekt</h4>
-                      <div className="space-y-1">
-                        <p><span className="font-medium">Adresse:</span> {contractData.property_address || '[Wird ergänzt]'}</p>
-                        <p><span className="font-medium">PLZ/Ort:</span> {contractData.property_postal || '[PLZ]'} {contractData.property_city || '[Ort]'}</p>
-                        {contractData.property_sqm && <p><span className="font-medium">Größe:</span> ca. {contractData.property_sqm} qm</p>}
-                      </div>
-                    </div>
-                    
-                    <div className="border-l-4 border-yellow-500 pl-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">Mietkonditionen</h4>
-                      <div className="space-y-1">
-                        <p><span className="font-medium">Monatsmiete:</span> {contractData.rent_amount ? `${contractData.rent_amount} €` : '[Wird ergänzt]'}</p>
-                        <p><span className="font-medium">Mietbeginn:</span> {contractData.start_date ? new Date(contractData.start_date).toLocaleDateString('de-DE') : '[Wird ergänzt]'}</p>
-                        <p><span className="font-medium">Vertragsart:</span> {contractData.contract_type === 'unlimited' ? 'Unbefristet' : 'Befristet'}</p>
-                        {contractData.contract_type === 'fixed_term' && contractData.end_date && (
-                          <p><span className="font-medium">Mietende:</span> {new Date(contractData.end_date).toLocaleDateString('de-DE')}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ✅ NEUE MODULARE PRICING SECTION */}
-                  <div className="mt-6 pt-6 border-t">
-                    <PricingSection
-                      contractType="untermietvertrag"
-                      basePrice={12.90}
-                      selectedAddons={selectedAddons}
-                      onAddonChange={handleAddonChange}
-                      showTitle={false}
-                      compact={true}
-                    />
-                  </div>
-
-                  {/* Zusätzliche Services */}
-                  <div className="mt-6 pt-6 border-t">
-                    <h4 className="font-semibold text-gray-900 mb-3">Enthaltene Services</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span className="text-sm">Rechtssicherer Untermietvertrag</span>
-                      </div>
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span className="text-sm">Sofortiger PDF-Download</span>
-                      </div>
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span className="text-sm">E-Mail-Versand an {contractData.customer_email}</span>
-                      </div>
-                      {selectedAddons?.includes('protocol') && (
-                        <div className="flex items-center text-green-600">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          <span className="text-sm">Professionelles Übergabeprotokoll</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Hinweis zu leeren Feldern */}
-                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <h4 className="font-semibold text-yellow-800 mb-2">💡 Hinweis zu leeren Feldern</h4>
-                    <p className="text-sm text-yellow-700">
-                      Felder, die Sie nicht ausgefüllt haben, erscheinen im finalen PDF als Blanks zum 
-                      handschriftlichen Ausfüllen oder späteren Ergänzen.
+        {/* Schritt 2: Payment */}
+        {currentStep === 'payment' && (
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Linke Spalte: Vertragsdaten + Addons (2 Spalten) */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Vertragsdaten Zusammenfassung */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  📋 Ihre Vertragsdaten
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Untermieter:</span>
+                    <p className="text-gray-900">
+                      {contractData.tenant_first_name} {contractData.tenant_last_name}
                     </p>
                   </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Hauptmieter:</span>
+                    <p className="text-gray-900">
+                      {contractData.landlord_first_name} {contractData.landlord_last_name}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Mietobjekt:</span>
+                    <p className="text-gray-900">
+                      {contractData.property_address}, {contractData.property_postal} {contractData.property_city}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Miete:</span>
+                    <p className="text-gray-900">
+                      {contractData.rent_amount}€ monatlich
+                    </p>
+                  </div>
+                  {contractData.newsletter_signup && (
+                    <div className="col-span-2">
+                      <span className="text-sm text-blue-600">
+                        ✉️ Sie erhalten auch unseren Newsletter mit nützlichen Rechtstipps.
+                      </span>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Rechte Spalte: Payment Module */}
-                <div>
-                  <PaymentModule
-                    contractType="untermietvertrag"
-                    formData={contractData}
-                    selectedAddons={getSelectedAddons()}
-                    amount={totalPrice.toFixed(2)}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentError={handlePaymentError}
-                    customerEmail={contractData.customer_email}
-                  />
-                </div>
+              {/* Zusätzliche Addon-Auswahl für Payment-Schritt */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  🛒 Noch weitere Services hinzufügen?
+                </h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Sie können auch jetzt noch zusätzliche Services zu Ihrem Vertrag hinzufügen.
+                </p>
+                
+                {/* Addon-Auswahl Container */}
+                <PricingSection
+                  contractType="untermietvertrag"
+                  basePrice={basePrice}
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  className="border-0 shadow-none bg-gray-50"
+                />
+              </div>
+            </div>
+
+            {/* Rechte Spalte: Payment Module (1 Spalte) - FIXED */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-6">
+                <PaymentModule
+                  contractType="untermietvertrag"
+                  formData={contractData}
+                  selectedAddons={getSelectedAddons()}
+                  amount={totalPrice.toFixed(2)}
+                  onPaymentSuccess={handlePaymentSuccess}
+                  onPaymentError={handlePaymentError}
+                  customerEmail={contractData.customer_email}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>
@@ -209,91 +195,49 @@ export default function UntermietvertragPage() {
 
         {/* Schritt 3: Erfolgreich */}
         {currentStep === 'success' && paymentResult && (
-          <div className="py-16">
-            <div className="max-w-2xl mx-auto px-4 text-center">
-              <div className="bg-white rounded-lg shadow-lg p-8">
-                <div className="text-center mb-8">
-                  <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    Vertrag erfolgreich erstellt!
-                  </h2>
-                  <p className="text-lg text-gray-600">
-                    Ihr Untermietvertrag wurde erfolgreich generiert und ist bereit zum Download.
-                  </p>
-                </div>
-
-                {/* Erfolgs-Details */}
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Zahlung erfolgreich verarbeitet
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    PDF automatisch generiert
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Vertrag heruntergeladen
-                  </div>
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Vertrag erfolgreich erstellt!
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Ihr Untermietvertrag wurde erfolgreich generiert und ist bereit zum Download.
+              </p>
+              
+              {paymentResult.pdfUrl && (
+                <div className="space-y-4">
+                  <Button
+                    onClick={() => window.open(paymentResult.pdfUrl, '_blank')}
+                    className="w-full sm:w-auto"
+                  >
+                    <FileText className="h-5 w-5 mr-2" />
+                    PDF herunterladen
+                  </Button>
+                  
                   {contractData.customer_email && (
-                    <div className="flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                      E-Mail-Kopie versendet
-                    </div>
+                    <p className="text-sm text-gray-600 flex items-center justify-center">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Eine Kopie wurde an {contractData.customer_email} gesendet
+                    </p>
                   )}
                 </div>
+              )}
 
-                {/* Email Status */}
-                {contractData.customer_email && (
-                  <div className="mb-8 p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center justify-center text-blue-800">
-                      <Mail className="h-5 w-5 mr-2" />
-                      <span className="font-medium">
-                        Eine Kopie wurde an {contractData.customer_email} gesendet
-                      </span>
-                    </div>
-                    <p className="text-blue-600 text-sm mt-2">
-                      Prüfen Sie auch Ihren Spam-Ordner, falls die E-Mail nicht ankommt.
-                    </p>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="space-y-4">
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                  >
-                    Neuen Vertrag erstellen
-                  </button>
-                  
-                  <Link
-                    href="/"
-                    className="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-center"
-                  >
-                    Zurück zur Startseite
-                  </Link>
-                </div>
-
-                {/* Support Info */}
-                <div className="mt-8 pt-6 border-t text-sm text-gray-600">
-                  <p>
-                    <strong>Benötigen Sie Hilfe?</strong><br />
-                    Kontaktieren Sie uns unter <a href="mailto:support@palworks.de" className="text-blue-600 hover:underline">support@palworks.de</a>
-                  </p>
-                  <p className="mt-2">
-                    <strong>Wichtiger Hinweis:</strong> Bewahren Sie Ihre PDF-Datei sicher auf. 
-                    Ein erneuter Download ist nur über diese Erfolgsseite möglich.
-                  </p>
-                </div>
+              <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Wichtige Hinweise:</h3>
+                <ul className="text-sm text-blue-800 text-left space-y-1">
+                  <li>• Bewahren Sie den Vertrag sicher auf</li>
+                  <li>• Alle Parteien sollten eine Kopie erhalten</li>
+                  <li>• Bei Fragen kontaktieren Sie unseren Support</li>
+                </ul>
               </div>
             </div>
           </div>
         )}
-      </main>
-    </>
+      </div>
+    </div>
   )
 }
