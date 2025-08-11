@@ -1,4 +1,4 @@
-// pages/api/send-contract-email.js - KORRIGIERTE VERSION
+// pages/api/send-contract-email.js - VOLLSTÄNDIGE KORRIGIERTE VERSION
 const nodemailer = require('nodemailer'); // ✅ STATISCHER IMPORT
 
 async function createGmailTransporter() {
@@ -228,3 +228,38 @@ export default async function handler(req, res) {
 
     // PDF generieren
     const pdfBuffer = await generatePDFForContract(contractType, formData, selectedAddons);
+    
+    if (!pdfBuffer) {
+      throw new Error('PDF generation returned null/undefined');
+    }
+
+    console.log('✅ PDF generiert:', {
+      size: `${Math.round(pdfBuffer.length / 1024)} KB`,
+      filename: `${contractType}_${new Date().toISOString().slice(0,10)}.pdf`
+    });
+
+    // E-Mail mit PDF versenden
+    const emailResult = await sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer);
+
+    // Erfolgreiche Antwort
+    res.status(200).json({
+      success: true,
+      message: 'E-Mail erfolgreich versendet',
+      messageId: emailResult.messageId,
+      filename: emailResult.filename,
+      recipient: email,
+      contractType: contractType
+    });
+
+  } catch (error) {
+    console.error('❌ E-Mail-Versand Fehler:', error);
+    
+    // Fehler-Antwort
+    res.status(500).json({
+      success: false,
+      error: 'E-Mail-Versand fehlgeschlagen',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
