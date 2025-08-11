@@ -1,5 +1,4 @@
-// pages/untermietvertrag.js - KORRIGIERTE VERSION mit fixer Preisberechnung
-
+// pages/untermietvertrag.js - KORRIGIERTE VERSION
 import { useState, useCallback, useMemo } from 'react'
 import { Stepper } from '../components/ui/stepper'
 import { Button } from '../components/ui/button'
@@ -31,9 +30,18 @@ export default function UntermietvertragPage() {
 
   // Gesamtpreis berechnen - useMemo für Performance
   const totalPrice = useMemo(() => {
-    // Diese Funktion wird in PricingSection berechnet, hier nur als Fallback
-    return basePrice + (selectedAddons?.length || 0) * 5 // Fallback-Berechnung
-  }, [selectedAddons])
+    // Mock-Preise für die Addons
+    const addonPrices = {
+      'uebergabeprotokoll': 9.90,
+      'rechtsberatung': 29.90
+    }
+    
+    const addonTotal = selectedAddons.reduce((sum, addonKey) => {
+      return sum + (addonPrices[addonKey] || 0)
+    }, 0)
+    
+    return basePrice + addonTotal
+  }, [selectedAddons, basePrice])
 
   // Formular Submit Handler
   const handleFormSubmit = async (formData) => {
@@ -95,7 +103,7 @@ export default function UntermietvertragPage() {
               />
             </div>
 
-            {/* Rechte Spalte: Preisübersicht (1 Spalte) - FIXED POSITIONING */}
+            {/* Rechte Spalte: Preisübersicht (1 Spalte) */}
             <div className="lg:col-span-1">
               <div className="sticky top-6">
                 <PricingSection
@@ -175,7 +183,7 @@ export default function UntermietvertragPage() {
               </div>
             </div>
 
-            {/* Rechte Spalte: Payment Module (1 Spalte) - FIXED */}
+            {/* Rechte Spalte: Payment Module (1 Spalte) */}
             <div className="lg:col-span-1">
               <div className="sticky top-6">
                 <PaymentModule
