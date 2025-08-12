@@ -88,7 +88,17 @@ export default function UntermietvertragPage() {
 
   const handleFormSubmit = (data) => {
     console.log('📋 Form submitted with data:', data)
-    updateFormData(data)
+    
+    // ✅ FIX: Addon-Daten in Form-Data einbetten
+    const completeFormData = {
+      ...data,
+      selected_addons: selectedAddons, // ✅ Addons übertragen
+      addon_details: getSelectedAddonDetails(), // ✅ Addon-Details übertragen
+      calculated_total: totalPrice // ✅ Berechneten Preis übertragen
+    }
+    
+    console.log('🔍 Complete form data with addons:', completeFormData)
+    updateFormData(completeFormData)
     setCurrentStep('preview')
   }
 
@@ -233,6 +243,14 @@ export default function UntermietvertragPage() {
                     Die monatliche Miete beträgt <span className="font-medium">{formData.rent_amount || '[Miete]'}€</span>.
                     Der Vertrag wird nach deutschem Recht erstellt und enthält alle notwendigen Klauseln für eine rechtssichere Untervermietung.
                   </p>
+                  
+                  {/* ✅ FIX: Klar trennen zwischen Miete und Kaufpreis */}
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 Hinweis:</strong> Die Miete ({formData.rent_amount || '[Miete]'}€/Monat) ist der monatliche Betrag zwischen den Parteien. 
+                      Der Kaufpreis für diesen Vertrag beträgt {formData.calculated_total ? formData.calculated_total.toFixed(2) : totalPrice.toFixed(2)}€.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Wichtige Vertragsdaten */}
@@ -318,22 +336,24 @@ export default function UntermietvertragPage() {
                     </div>
                   )}
 
-                  {/* Gesamtsumme */}
+                  {/* ✅ FIX: Gesamtsumme aus übertragenen Daten */}
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Gesamtsumme</span>
-                      <span className="text-2xl font-bold text-blue-600">{totalPrice.toFixed(2)}€</span>
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formData.calculated_total ? formData.calculated_total.toFixed(2) : totalPrice.toFixed(2)}€
+                      </span>
                     </div>
                     
-                    {/* Aufschlüsselung */}
-                    {selectedAddonDetails.length > 0 && (
+                    {/* ✅ FIX: Aufschlüsselung aus übertragenen Daten */}
+                    {formData.addon_details && formData.addon_details.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         <div className="text-sm text-gray-600 space-y-1">
                           <div className="flex justify-between">
                             <span>Basis-Vertrag</span>
                             <span>{basePrice.toFixed(2)} €</span>
                           </div>
-                          {selectedAddonDetails.map(addon => (
+                          {formData.addon_details.map(addon => (
                             <div key={addon.key} className="flex justify-between text-blue-600">
                               <span className="flex items-center">
                                 <span className="text-xs mr-1">+</span>
@@ -349,13 +369,13 @@ export default function UntermietvertragPage() {
                 </div>
               </div>
 
-              {/* Payment */}
+              {/* ✅ FIX: Payment mit korrektem Preis und Addons */}
               <PaymentModule
-                amount={totalPrice}
-                orderDescription={`Untermietvertrag${selectedAddons.length > 0 ? ' + Zusatzleistungen' : ''}`}
+                amount={formData.calculated_total || totalPrice}
+                orderDescription={`Untermietvertrag${formData.selected_addons && formData.selected_addons.length > 0 ? ' + Zusatzleistungen' : ''}`}
                 customerEmail={formData.billing_email || ''}
                 formData={formData}
-                selectedAddons={getSelectedAddons()}
+                selectedAddons={formData.selected_addons || getSelectedAddons()}
                 contractType="untermietvertrag"
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
@@ -384,13 +404,14 @@ export default function UntermietvertragPage() {
                       <FileText className="h-4 w-4 mr-2" />
                       <span>Untermietvertrag.pdf</span>
                     </div>
-                    {selectedAddons.includes('handover_protocol') && (
+                    {/* ✅ FIX: Success-Dokumente aus übertragenen Addons */}
+                    {formData.selected_addons && formData.selected_addons.includes('handover_protocol') && (
                       <div className="flex items-center justify-center">
                         <FileText className="h-4 w-4 mr-2" />
                         <span>Übergabeprotokoll.pdf</span>
                       </div>
                     )}
-                    {selectedAddons.includes('explanation') && (
+                    {formData.selected_addons && formData.selected_addons.includes('explanation') && (
                       <div className="flex items-center justify-center">
                         <FileText className="h-4 w-4 mr-2" />
                         <span>Vertragserläuterungen.pdf</span>
@@ -448,13 +469,15 @@ export default function UntermietvertragPage() {
         {/* Development Debug Info */}
         {process.env.NODE_ENV === 'development' && mounted && (
           <div className="fixed bottom-4 right-4 bg-blue-600 text-white p-3 rounded-lg shadow-lg max-w-xs">
-            <h4 className="font-bold text-sm mb-1">🔧 SSR-Safe Debug</h4>
+            <h4 className="font-bold text-sm mb-1">🔧 State Debug</h4>
             <div className="text-xs space-y-1">
               <div>Step: {currentStep}</div>
               <div>Mounted: ✅</div>
               <div>Hook: {hookState || 'loading'}</div>
-              <div>Addons: {selectedAddons.join(', ') || 'Keine'}</div>
-              <div>Preis: {totalPrice.toFixed(2)}€</div>
+              <div>Form Addons: {formData.selected_addons ? formData.selected_addons.join(', ') : 'none'}</div>
+              <div>Current Addons: {selectedAddons.join(', ') || 'Keine'}</div>
+              <div>Form Price: {formData.calculated_total ? formData.calculated_total.toFixed(2) : 'none'}€</div>
+              <div>Current Price: {totalPrice.toFixed(2)}€</div>
             </div>
           </div>
         )}
