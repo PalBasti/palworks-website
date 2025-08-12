@@ -15,14 +15,14 @@ const PricingSection = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Addon-Konfiguration - wird später aus Supabase geladen
+  // ✅ KORRIGIERTE Addon-Konfiguration - KONSISTENTE BEGRIFFE
   const staticAddons = {
     untermietvertrag: [
       {
         id: 1,
         addon_key: 'explanation',
         name: 'Vertragserläuterungen',
-        description: 'Detaillierte Erklärungen zu allen Vertragsklauseln',
+        description: 'Detaillierte schriftliche Erklärungen zu allen Vertragsklauseln (PDF)',
         price: 9.90,
         is_popular: false,
         icon: '📝'
@@ -35,24 +35,41 @@ const PricingSection = ({
         price: 7.90,
         is_popular: true,
         icon: '📋'
+      },
+      {
+        id: 3,
+        addon_key: 'legal_review',
+        name: 'Anwaltliche Prüfung',
+        description: 'Überprüfung durch qualifizierte Rechtsanwälte',
+        price: 29.90,
+        is_popular: false,
+        icon: '⚖️'
       }
-      // ✅ ENTFERNT: legal_review für Phase 1
     ],
     garage: [
       {
         id: 4,
+        addon_key: 'explanation',
+        name: 'Vertragserläuterungen',
+        description: 'Detaillierte schriftliche Erklärungen zu allen Vertragsklauseln (PDF)',
+        price: 9.90,
+        is_popular: false,
+        icon: '📝'
+      },
+      {
+        id: 5,
         addon_key: 'insurance_clause',
         name: 'Versicherungsklauseln',
-        description: 'Zusätzliche Absicherung bei Schäden',
+        description: 'Zusätzliche Absicherung bei Schäden und Haftung',
         price: 4.90,
         is_popular: true,
         icon: '🛡️'
       },
       {
-        id: 5,
+        id: 6,
         addon_key: 'maintenance_guide',
         name: 'Wartungshandbuch',
-        description: 'Anleitung zur ordnungsgemäßen Nutzung',
+        description: 'Anleitung zur ordnungsgemäßen Nutzung und Pflege',
         price: 12.90,
         is_popular: false,
         icon: '🔧'
@@ -60,16 +77,34 @@ const PricingSection = ({
     ],
     wg: [
       {
-        id: 6,
+        id: 7,
+        addon_key: 'explanation',
+        name: 'Vertragserläuterungen',
+        description: 'Detaillierte schriftliche Erklärungen zu allen Vertragsklauseln (PDF)',
+        price: 9.90,
+        is_popular: false,
+        icon: '📝'
+      },
+      {
+        id: 8,
+        addon_key: 'handover_protocol',
+        name: 'Übergabeprotokoll',
+        description: 'Speziell für WG-Zimmer angepasstes Übergabeprotokoll',
+        price: 7.90,
+        is_popular: true,
+        icon: '📋'
+      },
+      {
+        id: 9,
         addon_key: 'house_rules',
         name: 'WG-Hausordnung',
-        description: 'Vorlage für harmonisches Zusammenleben',
+        description: 'Vorlage für harmonisches Zusammenleben in der WG',
         price: 6.90,
         is_popular: true,
         icon: '🏠'
       },
       {
-        id: 7,
+        id: 10,
         addon_key: 'cleaning_schedule',
         name: 'Putzplan-Template',
         description: 'Faire Aufteilung der Reinigungsarbeiten',
@@ -87,27 +122,21 @@ const PricingSection = ({
         setLoading(true);
         
         // Versuche echte Supabase-Daten zu laden
-        try {
-          const { getAddonsForContract } = await import('../../lib/supabase/addonService');
-          const data = await getAddonsForContract(contractType);
-          setAddons(data);
-        } catch (serviceError) {
-          console.log('Using static addon data for development');
-          // Fallback auf statische Daten
-          let availableAddons = staticAddons[contractType] || [];
+        // TODO: Implementiere supabaseAddonService.getAddonsByContractType(contractType)
+        
+        // Fallback auf statische Daten
+        const contractAddons = staticAddons[contractType] || [];
+        
+        // Filtere Addons wenn enabledAddons gesetzt ist (für schrittweise Integration)
+        const filteredAddons = enabledAddons 
+          ? contractAddons.filter(addon => enabledAddons.includes(addon.addon_key))
+          : contractAddons;
           
-          // Filtere Addons basierend auf enabledAddons (für schrittweise Integration)
-          if (enabledAddons && Array.isArray(enabledAddons)) {
-            availableAddons = availableAddons.filter(addon => 
-              enabledAddons.includes(addon.addon_key)
-            );
-          }
-          
-          setAddons(availableAddons);
-        }
-      } catch (error) {
-        console.error('Error loading addons:', error);
-        setError('Fehler beim Laden der Zusatzleistungen');
+        setAddons(filteredAddons);
+        setError(null);
+      } catch (err) {
+        console.error('Fehler beim Laden der Addons:', err);
+        setError('Addons konnten nicht geladen werden');
         setAddons([]);
       } finally {
         setLoading(false);
@@ -117,43 +146,30 @@ const PricingSection = ({
     loadAddons();
   }, [contractType, enabledAddons]);
 
-  // Addon-Auswahl Toggle
+  // Addon umschalten
   const toggleAddon = (addonKey) => {
     const newSelection = selectedAddons.includes(addonKey)
       ? selectedAddons.filter(key => key !== addonKey)
       : [...selectedAddons, addonKey];
-    
     onAddonChange(newSelection);
   };
 
-  // Gesamtpreis berechnen
+  // Preisberechnung
   const calculateTotal = () => {
-    const addonTotal = selectedAddons.reduce((sum, addonKey) => {
-      const addon = addons.find(a => a.addon_key === addonKey);
-      return sum + (addon ? parseFloat(addon.price) : 0);
+    const addonTotal = addons.reduce((total, addon) => {
+      return selectedAddons.includes(addon.addon_key) ? total + addon.price : total;
     }, 0);
-    
     return basePrice + addonTotal;
   };
 
-  // Addon-Details abrufen
-  const getSelectedAddonDetails = () => {
-    return selectedAddons.map(addonKey => {
-      const addon = addons.find(a => a.addon_key === addonKey);
-      return addon ? { key: addonKey, ...addon } : null;
-    }).filter(Boolean);
-  };
+  // Gewählte Addon-Details
+  const selectedDetails = addons.filter(addon => selectedAddons.includes(addon.addon_key));
+  const totalPrice = calculateTotal();
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-16 bg-gray-200 rounded"></div>
-            <div className="h-16 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="animate-pulse bg-gray-100 rounded-lg h-32 flex items-center justify-center">
+        <span className="text-gray-500">Lade Zusatzleistungen...</span>
       </div>
     );
   }
@@ -161,19 +177,13 @@ const PricingSection = ({
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <Info className="h-5 w-5 text-red-400 mr-2" />
-          <span className="text-red-800 text-sm">{error}</span>
-        </div>
+        <span className="text-red-700">⚠️ {error}</span>
       </div>
     );
   }
 
-  const totalPrice = calculateTotal();
-  const selectedDetails = getSelectedAddonDetails();
-
   return (
-    <div className={`bg-white rounded-lg border ${compact ? 'p-4' : 'p-6'}`}>
+    <div className={`bg-white rounded-lg shadow-sm border ${compact ? 'p-4' : 'p-6'}`}>
       {showTitle && (
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -284,7 +294,7 @@ const PricingSection = ({
           <h5 className="font-medium text-gray-900 mb-2">Gewählte Zusatzleistungen:</h5>
           <div className="space-y-1">
             {selectedDetails.map((addon) => (
-              <div key={addon.key} className="flex justify-between text-sm">
+              <div key={addon.addon_key} className="flex justify-between text-sm">
                 <span className="flex items-center">
                   <span className="mr-2">{addon.icon}</span>
                   {addon.name}
