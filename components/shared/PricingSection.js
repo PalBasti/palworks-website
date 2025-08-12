@@ -1,137 +1,123 @@
-// components/shared/PricingSection.js - GARANTIERT DEPLOYMENT-FÄHIG
-import { useState, useEffect } from 'react';
+// components/shared/PricingSection.js - PRODUCTION READY
+import React, { useState, useEffect } from 'react';
+import { Check, Star, Info } from 'lucide-react';
 
-export default function PricingSection({ 
+const PricingSection = ({ 
   contractType = 'untermietvertrag',
-  basePrice = 19.90, 
-  selectedAddons = [], 
+  basePrice = 12.90,
+  selectedAddons = [],
   onAddonChange = () => {},
-  className = ""
-}) {
+  showTitle = true,
+  compact = false,
+  enabledAddons = null // Für schrittweise Integration: ['handover_protocol']
+}) => {
   const [addons, setAddons] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Mock-Addons für verschiedene Vertragstypen - FEST EINGEBAUT
-  const getMockAddons = (contractType) => {
-    const mockData = {
-      'untermietvertrag': [
-        {
-          id: 1,
-          addon_key: 'explanation',
-          name: 'Vertragsberatung',
-          description: 'Telefonische Erläuterung aller Vertragsklauseln',
-          price: 9.90,
-          is_popular: false
-        },
-        {
-          id: 2,
-          addon_key: 'handover_protocol',
-          name: 'Übergabeprotokoll',
-          description: 'Professionelles Protokoll für Ein- und Auszug',
-          price: 7.90,
-          is_popular: true
-        },
-        {
-          id: 3,
-          addon_key: 'legal_review',
-          name: 'Anwaltliche Prüfung',
-          description: 'Individuelle Prüfung durch Fachanwalt',
-          price: 29.90,
-          is_popular: false
-        }
-      ],
-      'garage': [
-        {
-          id: 4,
-          addon_key: 'insurance_clause',
-          name: 'Versicherungsklausel',
-          description: 'Erweiterte Haftungsregelungen',
-          price: 4.90,
-          is_popular: true
-        },
-        {
-          id: 5,
-          addon_key: 'maintenance_guide',
-          name: 'Wartungshandbuch',
-          description: 'Leitfaden für Garagenpflege',
-          price: 12.90,
-          is_popular: false
-        }
-      ],
-      'wg': [
-        {
-          id: 6,
-          addon_key: 'house_rules',
-          name: 'WG-Hausordnung',
-          description: 'Detaillierte Gemeinschaftsregeln',
-          price: 6.90,
-          is_popular: true
-        },
-        {
-          id: 7,
-          addon_key: 'cleaning_schedule',
-          name: 'Putzplan-Template',
-          description: 'Faire Aufgabenverteilung',
-          price: 3.90,
-          is_popular: false
-        }
-      ]
-    };
-    
-    return mockData[contractType] || [];
-  };
-
-  // Optionaler API-Call für echte Daten (Fallback zu Mock)
-  const tryLoadRealAddons = async (contractType) => {
-    try {
-      // Versuche echte API - falls verfügbar
-      const response = await fetch(`/api/addons?contract_type=${contractType}`);
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, data: data.addons || [] };
+  // Addon-Konfiguration - wird später aus Supabase geladen
+  const staticAddons = {
+    untermietvertrag: [
+      {
+        id: 1,
+        addon_key: 'explanation',
+        name: 'Vertragserläuterungen',
+        description: 'Detaillierte Erklärungen zu allen Vertragsklauseln',
+        price: 9.90,
+        is_popular: false,
+        icon: '📝'
+      },
+      {
+        id: 2,
+        addon_key: 'handover_protocol',
+        name: 'Übergabeprotokoll',
+        description: 'Professionelles Protokoll für Ein- und Auszug',
+        price: 7.90,
+        is_popular: true,
+        icon: '📋'
       }
-      throw new Error('API not available');
-    } catch (error) {
-      // Fallback zu Mock-Daten - KEIN Fehler
-      return { 
-        success: true, 
-        data: getMockAddons(contractType),
-        isMock: true 
-      };
-    }
+      // ✅ ENTFERNT: legal_review für Phase 1
+    ],
+    garage: [
+      {
+        id: 4,
+        addon_key: 'insurance_clause',
+        name: 'Versicherungsklauseln',
+        description: 'Zusätzliche Absicherung bei Schäden',
+        price: 4.90,
+        is_popular: true,
+        icon: '🛡️'
+      },
+      {
+        id: 5,
+        addon_key: 'maintenance_guide',
+        name: 'Wartungshandbuch',
+        description: 'Anleitung zur ordnungsgemäßen Nutzung',
+        price: 12.90,
+        is_popular: false,
+        icon: '🔧'
+      }
+    ],
+    wg: [
+      {
+        id: 6,
+        addon_key: 'house_rules',
+        name: 'WG-Hausordnung',
+        description: 'Vorlage für harmonisches Zusammenleben',
+        price: 6.90,
+        is_popular: true,
+        icon: '🏠'
+      },
+      {
+        id: 7,
+        addon_key: 'cleaning_schedule',
+        name: 'Putzplan-Template',
+        description: 'Faire Aufteilung der Reinigungsarbeiten',
+        price: 3.90,
+        is_popular: false,
+        icon: '🧹'
+      }
+    ]
   };
 
-  // Addons laden beim Mount
+  // Addons laden - mit Fallback auf Static-Daten
   useEffect(() => {
     const loadAddons = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
+        setLoading(true);
         
-        const response = await tryLoadRealAddons(contractType);
-        setAddons(response.data || []);
-        
-        // Debug-Info
-        if (response.isMock) {
-          console.log(`📦 Using mock addons for ${contractType}`);
+        // Versuche echte Supabase-Daten zu laden
+        try {
+          const { getAddonsForContract } = await import('../../lib/supabase/addonService');
+          const data = await getAddonsForContract(contractType);
+          setAddons(data);
+        } catch (serviceError) {
+          console.log('Using static addon data for development');
+          // Fallback auf statische Daten
+          let availableAddons = staticAddons[contractType] || [];
+          
+          // Filtere Addons basierend auf enabledAddons (für schrittweise Integration)
+          if (enabledAddons && Array.isArray(enabledAddons)) {
+            availableAddons = availableAddons.filter(addon => 
+              enabledAddons.includes(addon.addon_key)
+            );
+          }
+          
+          setAddons(availableAddons);
         }
-        
-      } catch (err) {
-        console.error('Addon loading error:', err);
-        // Auch bei Fehler: Mock-Daten verwenden
-        setAddons(getMockAddons(contractType));
+      } catch (error) {
+        console.error('Error loading addons:', error);
+        setError('Fehler beim Laden der Zusatzleistungen');
+        setAddons([]);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    if (contractType) {
-      loadAddons();
-    }
-  }, [contractType]);
+    loadAddons();
+  }, [contractType, enabledAddons]);
 
-  // Addon umschalten
+  // Addon-Auswahl Toggle
   const toggleAddon = (addonKey) => {
     const newSelection = selectedAddons.includes(addonKey)
       ? selectedAddons.filter(key => key !== addonKey)
@@ -142,112 +128,172 @@ export default function PricingSection({
 
   // Gesamtpreis berechnen
   const calculateTotal = () => {
-    const addonTotal = selectedAddons.reduce((sum, key) => {
-      const addon = addons.find(a => a.addon_key === key);
-      return sum + (addon?.price || 0);
+    const addonTotal = selectedAddons.reduce((sum, addonKey) => {
+      const addon = addons.find(a => a.addon_key === addonKey);
+      return sum + (addon ? parseFloat(addon.price) : 0);
     }, 0);
     
     return basePrice + addonTotal;
   };
 
-  // Loading State
-  if (isLoading) {
+  // Addon-Details abrufen
+  const getSelectedAddonDetails = () => {
+    return selectedAddons.map(addonKey => {
+      const addon = addons.find(a => a.addon_key === addonKey);
+      return addon ? { key: addonKey, ...addon } : null;
+    }).filter(Boolean);
+  };
+
+  if (loading) {
     return (
-      <div className={`bg-gray-50 border border-gray-200 rounded-lg p-6 ${className}`}>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
-          <span className="text-gray-600">Lade Preisoptionen...</span>
+      <div className="bg-white rounded-lg border p-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-16 bg-gray-200 rounded"></div>
+            <div className="h-16 bg-gray-200 rounded"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  const total = calculateTotal();
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="flex items-center">
+          <Info className="h-5 w-5 text-red-400 mr-2" />
+          <span className="text-red-800 text-sm">{error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPrice = calculateTotal();
+  const selectedDetails = getSelectedAddonDetails();
 
   return (
-    <div className={`bg-gray-50 border border-gray-200 rounded-lg p-6 ${className}`}>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        💳 Preisübersicht
-        {addons.length === 0 && (
-          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-            Basis
-          </span>
-        )}
-      </h3>
+    <div className={`bg-white rounded-lg border ${compact ? 'p-4' : 'p-6'}`}>
+      {showTitle && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            📦 Zusatzleistungen
+          </h3>
+          <p className="text-sm text-gray-600">
+            Erweitern Sie Ihren Vertrag mit professionellen Zusatzdokumenten
+          </p>
+        </div>
+      )}
 
       {/* Basis-Vertrag */}
-      <div className="space-y-3 mb-6">
-        <div className="flex justify-between items-center p-3 bg-white rounded border">
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex justify-between items-center">
           <div>
-            <span className="font-medium text-gray-900">Basis-Vertrag</span>
-            <p className="text-sm text-gray-600">Vollständiger rechtssicherer Vertrag</p>
+            <h4 className="font-medium text-blue-900">
+              🏠 {contractType === 'untermietvertrag' ? 'Untermietvertrag' : 
+                   contractType === 'garage' ? 'Garagenvertrag' : 
+                   contractType === 'wg' ? 'WG-Untermietvertrag' : 'Vertrag'}
+            </h4>
+            <p className="text-sm text-blue-700 mt-1">
+              Rechtssicherer Basisvertrag inkl. PDF-Download und E-Mail-Versand
+            </p>
           </div>
-          <span className="font-bold text-lg text-gray-900">
+          <span className="text-lg font-bold text-blue-900">
             {basePrice.toFixed(2)} €
           </span>
         </div>
       </div>
 
-      {/* Optionale Addons - nur wenn welche geladen wurden */}
+      {/* Addon-Liste */}
       {addons.length > 0 && (
-        <div className="mb-6">
-          <h4 className="font-medium text-gray-900 mb-3">
-            📋 Optionale Zusatzleistungen
-          </h4>
-          <div className="space-y-2">
-            {addons.map((addon) => {
-              const isSelected = selectedAddons.includes(addon.addon_key);
-              
-              return (
-                <div
-                  key={addon.id}
-                  className={`
-                    cursor-pointer p-3 rounded border transition-all duration-200
-                    ${isSelected 
-                      ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-500' 
-                      : 'bg-white border-gray-200 hover:border-blue-300'
-                    }
-                  `}
-                  onClick={() => toggleAddon(addon.addon_key)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-start space-x-3">
-                      <div className={`
-                        mt-0.5 h-5 w-5 rounded border-2 flex items-center justify-center
-                        ${isSelected 
-                          ? 'bg-blue-600 border-blue-600' 
-                          : 'border-gray-300 bg-white'
-                        }
-                      `}>
-                        {isSelected && (
-                          <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+        <div className="space-y-3 mb-4">
+          {addons.map((addon) => {
+            const isSelected = selectedAddons.includes(addon.addon_key);
+            
+            return (
+              <div
+                key={addon.id}
+                onClick={() => toggleAddon(addon.addon_key)}
+                className={`relative border rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                  isSelected
+                    ? 'border-blue-500 bg-blue-50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-3">
+                    <div className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      isSelected 
+                        ? 'border-blue-500 bg-blue-500' 
+                        : 'border-gray-300'
+                    }`}>
+                      {isSelected && <Check className="h-3 w-3 text-white" />}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">{addon.icon}</span>
+                        <h4 className={`font-medium ${
+                          isSelected ? 'text-blue-900' : 'text-gray-900'
+                        }`}>
+                          {addon.name}
+                        </h4>
+                        {addon.is_popular && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            <Star className="h-3 w-3 mr-1" />
+                            Beliebt
+                          </span>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <span className={`font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                            {addon.name}
-                          </span>
-                          {addon.is_popular && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                              Beliebt
-                            </span>
-                          )}
-                        </div>
-                        <p className={`text-sm mt-1 ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
+                      
+                      {addon.description && (
+                        <p className={`text-sm mt-1 ${
+                          isSelected ? 'text-blue-700' : 'text-gray-600'
+                        }`}>
                           {addon.description}
                         </p>
-                      </div>
+                      )}
                     </div>
-                    <span className={`font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                      +{addon.price.toFixed(2)} €
-                    </span>
                   </div>
+                  
+                  <span className={`font-semibold ${
+                    isSelected ? 'text-blue-900' : 'text-gray-900'
+                  }`}>
+                    +{parseFloat(addon.price).toFixed(2)} €
+                  </span>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Keine Addons verfügbar */}
+      {addons.length === 0 && !loading && (
+        <div className="text-center py-6 text-gray-500">
+          <Info className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+          <p className="text-sm">
+            Für diesen Vertragstyp sind derzeit keine Zusatzleistungen verfügbar.
+          </p>
+        </div>
+      )}
+
+      {/* Ausgewählte Addons Summary (Compact Mode) */}
+      {compact && selectedDetails.length > 0 && (
+        <div className="mb-4 p-3 bg-gray-50 rounded">
+          <h5 className="font-medium text-gray-900 mb-2">Gewählte Zusatzleistungen:</h5>
+          <div className="space-y-1">
+            {selectedDetails.map((addon) => (
+              <div key={addon.key} className="flex justify-between text-sm">
+                <span className="flex items-center">
+                  <span className="mr-2">{addon.icon}</span>
+                  {addon.name}
+                </span>
+                <span className="text-blue-600 font-medium">
+                  +{parseFloat(addon.price).toFixed(2)} €
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -255,44 +301,36 @@ export default function PricingSection({
       {/* Gesamtsumme */}
       <div className="border-t pt-4">
         <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold text-gray-900">Gesamtsumme</span>
+          <span className="text-lg font-semibold text-gray-900">
+            Gesamtsumme
+          </span>
           <span className="text-2xl font-bold text-blue-600">
-            {total.toFixed(2)} €
+            {totalPrice.toFixed(2)} €
           </span>
         </div>
         
-        {/* Aufschlüsselung nur bei Addons */}
-        {selectedAddons.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="text-sm text-gray-600 space-y-1">
-              <div className="flex justify-between">
-                <span>Basis-Vertrag</span>
-                <span>{basePrice.toFixed(2)} €</span>
-              </div>
-              {selectedAddons.map(key => {
-                const addon = addons.find(a => a.addon_key === key);
-                return addon ? (
-                  <div key={key} className="flex justify-between text-blue-600">
-                    <span className="flex items-center">
-                      <span className="text-xs mr-1">+</span>
-                      {addon.name}
-                    </span>
-                    <span>+{addon.price.toFixed(2)} €</span>
-                  </div>
-                ) : null;
-              })}
-            </div>
+        {/* Hinweis */}
+        <div className="mt-3 flex items-center justify-center">
+          <div className="text-xs text-gray-500 flex items-center">
+            <Info className="h-3 w-3 mr-1" />
+            Alle Preise inkl. MwSt. • Sofortiger Download nach Zahlung
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Hinweise */}
-      <div className="mt-4 p-3 bg-blue-50 rounded text-sm text-blue-800">
-        <p className="flex items-center">
-          <span className="mr-2">💡</span>
-          Alle Preise inkl. MwSt. • Sofortiger PDF-Download nach Bezahlung
-        </p>
-      </div>
+      {/* Entwicklungshinweis */}
+      {enabledAddons && (
+        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+          <div className="flex items-center">
+            <Info className="h-4 w-4 text-amber-600 mr-2" />
+            <span className="text-amber-800">
+              Schrittweise Integration: Nur {enabledAddons.join(', ')} aktiviert
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default PricingSection;
