@@ -620,9 +620,9 @@ export default function UntermietvertragForm({ onSubmit, isSubmitting = false, i
       {/* Hinweis zu leeren Feldern */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <div className="flex items-start">
-          <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="font-medium text-amber-900 mb-1">💡 Hinweis zu optionalen Feldern</h4>
+            <h4 className="font-medium text-amber-900 mb-2">💡 Hinweis zu optionalen Feldern</h4>
             <p className="text-sm text-amber-800">
               Felder, die Sie nicht ausfüllen, erscheinen im PDF als Blanks zum späteren handschriftlichen 
               oder digitalen Ausfüllen. Dies ist völlig normal und rechtlich unbedenklich.
@@ -656,7 +656,7 @@ export default function UntermietvertragForm({ onSubmit, isSubmitting = false, i
       {Object.keys(errors).length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" />
             <div>
               <h4 className="font-medium text-red-900 mb-2">Bitte korrigieren Sie folgende Fehler:</h4>
               <ul className="text-sm text-red-800 space-y-1">
