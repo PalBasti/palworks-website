@@ -1,4 +1,13 @@
-// pages/untermietvertrag.js - SSR-SAFE VERSION
+{/* ✅ MANUAL DEBUGGING: Zeige Raw Form Data */}
+        {process.env.NODE_ENV === 'development' && currentStep === 'preview' && (
+          <div className="fixed bottom-20 right-4 bg-red-600 text-white p-3 rounded-lg shadow-lg max-w-xs text-xs">
+            <h4 className="font-bold mb-1">🚨 Raw Preview Data</h4>
+            <div>formData keys: {Object.keys(formData).length}</div>
+            <div>selected_addons exists: {formData.selected_addons ? 'YES' : 'NO'}</div>
+            <div>addon_details exists: {formData.addon_details ? 'YES' : 'NO'}</div>
+            <div>calculated_total: {formData.calculated_total || 'MISSING'}</div>
+          </div>
+        )}// pages/untermietvertrag.js - SSR-SAFE VERSION
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -89,15 +98,21 @@ export default function UntermietvertragPage() {
   const handleFormSubmit = (data) => {
     console.log('📋 Form submitted with data:', data)
     
-    // ✅ FIX: Addon-Daten in Form-Data einbetten
+    // ✅ FIX: Addon-Daten KORREKT übertragen
     const completeFormData = {
       ...data,
-      selected_addons: selectedAddons, // ✅ Addons übertragen
-      addon_details: getSelectedAddonDetails(), // ✅ Addon-Details übertragen
-      calculated_total: totalPrice // ✅ Berechneten Preis übertragen
+      // ✅ WICHTIG: selectedAddons aus dem aktuellen State der Parent-Komponente
+      selected_addons: selectedAddons,
+      addon_details: getSelectedAddonDetails(),
+      calculated_total: totalPrice
     }
     
-    console.log('🔍 Complete form data with addons:', completeFormData)
+    console.log('🔍 DEBUG - Form Submit:')
+    console.log('  - Current selectedAddons:', selectedAddons)
+    console.log('  - Addon details:', getSelectedAddonDetails())
+    console.log('  - Calculated total:', totalPrice)
+    console.log('  - Complete form data:', completeFormData)
+    
     updateFormData(completeFormData)
     setCurrentStep('preview')
   }
@@ -203,7 +218,7 @@ export default function UntermietvertragPage() {
                 </div>
               </div>
 
-              {/* UntermietvertragForm */}
+              {/* UntermietvertragForm mit initialData */}
               <UntermietvertragForm 
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
@@ -280,11 +295,12 @@ export default function UntermietvertragPage() {
                   <div className="bg-purple-50 p-4 rounded">
                     <div className="flex items-center mb-2">
                       <Euro className="h-5 w-5 text-purple-600 mr-2" />
-                      <h4 className="font-medium text-purple-900">Konditionen</h4>
+                      <h4 className="font-medium text-purple-900">Vertragsdaten</h4>
                     </div>
                     <div className="text-sm text-purple-800">
                       <p><span className="font-medium">Miete:</span> {formData.rent_amount || '[Betrag]'}€/Monat</p>
                       <p><span className="font-medium">Beginn:</span> {formData.start_date || '[Datum]'}</p>
+                      <p><span className="font-medium">Vertragskosten:</span> {formData.calculated_total ? formData.calculated_total.toFixed(2) : totalPrice.toFixed(2)}€</p>
                     </div>
                   </div>
                 </div>
@@ -474,8 +490,9 @@ export default function UntermietvertragPage() {
               <div>Step: {currentStep}</div>
               <div>Mounted: ✅</div>
               <div>Hook: {hookState || 'loading'}</div>
-              <div>Form Addons: {formData.selected_addons ? formData.selected_addons.join(', ') : 'none'}</div>
-              <div>Current Addons: {selectedAddons.join(', ') || 'Keine'}</div>
+              <div>Form Addons: {formData.selected_addons ? formData.selected_addons.join(', ') : 'NONE'}</div>
+              <div>Current Addons: {selectedAddons.join(', ') || 'NONE'}</div>
+              <div>Addon Details: {formData.addon_details ? formData.addon_details.length : 0}</div>
               <div>Form Price: {formData.calculated_total ? formData.calculated_total.toFixed(2) : 'none'}€</div>
               <div>Current Price: {totalPrice.toFixed(2)}€</div>
             </div>
