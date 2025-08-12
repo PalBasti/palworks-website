@@ -1,5 +1,5 @@
-// pages/untermietvertrag.js - HOOK INTEGRATION
-import { useState } from 'react'
+// pages/untermietvertrag.js - SSR-SAFE VERSION
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { FileText, ArrowLeft, CheckCircle, Download, Mail, User, Home, Euro } from 'lucide-react'
@@ -8,32 +8,86 @@ import PaymentModule from '../components/modules/PaymentModule'
 
 // ✅ Modulare Imports
 import PricingSection from '../components/shared/PricingSection'
-import { useContractForm } from '../hooks/useContractForm'
 
 export default function UntermietvertragPage() {
   const [currentStep, setCurrentStep] = useState('form') // form, preview, success
   const [paymentResult, setPaymentResult] = useState(null)
+  const [mounted, setMounted] = useState(false)
   
-  // ✅ Hook Integration - ersetzt manuellen State
-  const {
-    formData,
-    updateFormData,
-    selectedAddons,
-    handleAddonChange,
-    totalPrice,
-    basePrice,
-    isSubmitting,
-    errors,
-    validateForm,
-    getSelectedAddonDetails,
-    resetForm,
-    getDebugInfo
-  } = useContractForm('untermietvertrag', 12.90)
+  // ✅ FALLBACK: Manueller State für SSR-Safety
+  const [formData, setFormData] = useState({})
+  const [selectedAddons, setSelectedAddons] = useState([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // ✅ Hook State (wird nur client-side geladen)
+  const [hookState, setHookState] = useState(null)
+
+  // ✅ SSR-Safe mounting
+  useEffect(() => {
+    setMounted(true)
+    
+    // ✅ Dynamic Hook Import (nur client-side)
+    const loadHook = async () => {
+      try {
+        const { useContractForm } = await import('../hooks/useContractForm')
+        // Hook wird erst geladen, wenn Component mounted ist
+        setHookState('ready')
+      } catch (error) {
+        console.log('Hook not available, using fallback state')
+        setHookState('fallback')
+      }
+    }
+    
+    loadHook()
+  }, [])
+
+  // ✅ Basis-Preisberechnung (SSR-safe)
+  const basePrice = 12.90
+  const calculateTotalPrice = () => {
+    const addonPrices = {
+      'explanation': 9.90,
+      'handover_protocol': 7.90
+    }
+    
+    const addonTotal = selectedAddons.reduce((sum, addonKey) => {
+      return sum + (addonPrices[addonKey] || 0)
+    }, 0)
+    
+    return basePrice + addonTotal
+  }
+
+  const totalPrice = calculateTotalPrice()
+
+  const handleAddonChange = (newAddons) => {
+    setSelectedAddons(newAddons)
+  }
+
+  const updateFormData = (newData) => {
+    setFormData(prev => ({
+      ...prev,
+      ...newData
+    }))
+  }
+
+  const resetForm = () => {
+    setFormData({})
+    setSelectedAddons([])
+  }
+
+  const getSelectedAddonDetails = () => {
+    const addonDetails = {
+      'explanation': { name: 'Vertragserläuterungen', price: 9.90 },
+      'handover_protocol': { name: 'Übergabeprotokoll', price: 7.90 }
+    }
+
+    return selectedAddons.map(key => ({
+      key,
+      ...addonDetails[key]
+    })).filter(addon => addon.name)
+  }
 
   const handleFormSubmit = (data) => {
     console.log('📋 Form submitted with data:', data)
-    
-    // ✅ Hook: Update form data durch den Hook
     updateFormData(data)
     setCurrentStep('preview')
   }
@@ -57,8 +111,26 @@ export default function UntermietvertragPage() {
     return selectedAddons
   }
 
-  // ✅ Hook: Dynamischer Preis aus Hook
   const selectedAddonDetails = getSelectedAddonDetails()
+
+  // ✅ SSR-Safe Rendering
+  if (!mounted) {
+    return (
+      <>
+        <Head>
+          <title>Untermietvertrag erstellen - PalWorks</title>
+          <meta name="description" content="Rechtssicherer Untermietvertrag. Optional mit Übergabeprotokoll und Vertragserläuterungen." />
+        </Head>
+        
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Lade Vertragsformular...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
@@ -97,7 +169,7 @@ export default function UntermietvertragPage() {
                   Anwaltlich geprüft • Sofort verfügbar • Ab 12,90€
                 </p>
                 
-                {/* ✅ Hook: Live Preisvorschau */}
+                {/* Live Preisvorschau */}
                 {selectedAddons.length > 0 && (
                   <div className="mt-4 inline-flex items-center bg-blue-50 text-blue-800 px-4 py-2 rounded-lg text-sm">
                     💡 Gesamtpreis mit Zusatzleistungen: <span className="font-bold ml-1">{totalPrice.toFixed(2)}€</span>
@@ -105,7 +177,7 @@ export default function UntermietvertragPage() {
                 )}
               </div>
 
-              {/* ✅ Hook: PricingSection mit Hook-Integration */}
+              {/* PricingSection */}
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -146,7 +218,7 @@ export default function UntermietvertragPage() {
                 </h2>
               </div>
 
-              {/* ✅ Erweiteter Vertragsteaser mit Hook-Daten */}
+              {/* Vertragsteaser */}
               <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   📄 Ihr Untermietvertrag
@@ -163,7 +235,7 @@ export default function UntermietvertragPage() {
                   </p>
                 </div>
 
-                {/* ✅ Hook: Wichtige Vertragsdaten aus Hook */}
+                {/* Wichtige Vertragsdaten */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="bg-blue-50 p-4 rounded">
                     <div className="flex items-center mb-2">
@@ -199,7 +271,7 @@ export default function UntermietvertragPage() {
                   </div>
                 </div>
 
-                {/* ✅ Hook: Rechnungsempfänger aus Hook */}
+                {/* Rechnungsempfänger */}
                 <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
                   <h4 className="font-medium text-yellow-900 mb-2">📧 Rechnungsempfänger</h4>
                   <div className="text-sm text-yellow-800">
@@ -210,7 +282,7 @@ export default function UntermietvertragPage() {
                 </div>
               </div>
 
-              {/* ✅ Hook: PricingSection nochmal mit Hook-Integration */}
+              {/* Bestellübersicht */}
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -230,7 +302,7 @@ export default function UntermietvertragPage() {
                     </div>
                   </div>
 
-                  {/* ✅ Hook: Gewählte Addons aus Hook */}
+                  {/* Gewählte Addons */}
                   {selectedAddonDetails.length > 0 && (
                     <div className="space-y-2 mb-4">
                       <h4 className="font-medium text-gray-900">Gewählte Zusatzleistungen:</h4>
@@ -246,7 +318,7 @@ export default function UntermietvertragPage() {
                     </div>
                   )}
 
-                  {/* ✅ Hook: Gesamtsumme aus Hook */}
+                  {/* Gesamtsumme */}
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Gesamtsumme</span>
@@ -277,7 +349,7 @@ export default function UntermietvertragPage() {
                 </div>
               </div>
 
-              {/* ✅ Hook: Payment mit Hook-Daten */}
+              {/* Payment */}
               <PaymentModule
                 amount={totalPrice}
                 orderDescription={`Untermietvertrag${selectedAddons.length > 0 ? ' + Zusatzleistungen' : ''}`}
@@ -304,7 +376,7 @@ export default function UntermietvertragPage() {
                   Ihr rechtssicherer Untermietvertrag wurde erstellt und per E-Mail versendet.
                 </p>
 
-                {/* ✅ Hook: Erfolgs-Details mit Hook-Addons */}
+                {/* Erfolgs-Details */}
                 <div className="bg-green-50 rounded-lg p-6 mb-8">
                   <h3 className="font-semibold text-green-900 mb-3">📄 Ihre Dokumente</h3>
                   <div className="space-y-2 text-sm text-green-800">
@@ -353,7 +425,7 @@ export default function UntermietvertragPage() {
                   <button
                     onClick={() => {
                       setCurrentStep('form')
-                      resetForm() // ✅ Hook: Reset über Hook
+                      resetForm()
                       setPaymentResult(null)
                     }}
                     className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -373,17 +445,16 @@ export default function UntermietvertragPage() {
           )}
         </div>
 
-        {/* ✅ Hook: Erweiterte Development Debug Info */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* Development Debug Info */}
+        {process.env.NODE_ENV === 'development' && mounted && (
           <div className="fixed bottom-4 right-4 bg-blue-600 text-white p-3 rounded-lg shadow-lg max-w-xs">
-            <h4 className="font-bold text-sm mb-1">🎣 Hook Debug</h4>
+            <h4 className="font-bold text-sm mb-1">🔧 SSR-Safe Debug</h4>
             <div className="text-xs space-y-1">
               <div>Step: {currentStep}</div>
+              <div>Mounted: ✅</div>
+              <div>Hook: {hookState || 'loading'}</div>
               <div>Addons: {selectedAddons.join(', ') || 'Keine'}</div>
               <div>Preis: {totalPrice.toFixed(2)}€</div>
-              <div>Base: {basePrice.toFixed(2)}€</div>
-              <div>Valid Email: {formData.billing_email ? '✅' : '❌'}</div>
-              <div>Errors: {Object.keys(errors).length}</div>
             </div>
           </div>
         )}
