@@ -96,24 +96,11 @@ export default function UntermietvertragPage() {
   }
 
   const handleFormSubmit = (data) => {
-    console.log('📋 Form submitted with data:', data)
+    console.log('📋 Parent handleFormSubmit received:', data)
     
-    // ✅ FIX: Addon-Daten KORREKT übertragen
-    const completeFormData = {
-      ...data,
-      // ✅ WICHTIG: selectedAddons aus dem aktuellen State der Parent-Komponente
-      selected_addons: selectedAddons,
-      addon_details: getSelectedAddonDetails(),
-      calculated_total: totalPrice
-    }
-    
-    console.log('🔍 DEBUG - Form Submit:')
-    console.log('  - Current selectedAddons:', selectedAddons)
-    console.log('  - Addon details:', getSelectedAddonDetails())
-    console.log('  - Calculated total:', totalPrice)
-    console.log('  - Complete form data:', completeFormData)
-    
-    updateFormData(completeFormData)
+    // ✅ Die Daten kommen jetzt bereits komplett von der UntermietvertragForm
+    // Keine weitere Verarbeitung nötig, da Form bereits Addons eingebaut hat
+    updateFormData(data)
     setCurrentStep('preview')
   }
 
@@ -218,11 +205,15 @@ export default function UntermietvertragPage() {
                 </div>
               </div>
 
-              {/* UntermietvertragForm mit initialData */}
+              {/* ✅ FIX: UntermietvertragForm mit Addon-Daten versorgen */}
               <UntermietvertragForm 
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
                 initialData={formData}
+                // ✅ WICHTIG: Addon-Daten an Form weitergeben
+                selectedAddons={selectedAddons}
+                addonDetails={getSelectedAddonDetails()}
+                totalPrice={totalPrice}
               />
             </div>
           )}
