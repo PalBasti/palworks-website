@@ -238,4 +238,44 @@ async function handlePaymentProcessing(paymentIntent) {
       paymentIntent.id, 
       'processing',
       {
-        processing_method: paymentIntent.processing?.metho
+        processing_method: paymentIntent.processing?.method || 'unknown',
+        processing_type: paymentIntent.processing?.type || 'unknown'
+      }
+    );
+
+    if (!logResult.success) {
+      console.warn('Failed to update payment log:', logResult.error);
+    }
+
+    console.log('Processing payment status updated:', paymentIntent.id);
+
+  } catch (error) {
+    console.error('Error handling payment processing:', error);
+  }
+}
+
+// Utility: Contract-ID aus Payment Intent extrahieren
+function getContractIdFromPaymentIntent(paymentIntent) {
+  return paymentIntent.metadata?.contract_id || null;
+}
+
+// Utility: Idempotenz-Check für Webhook-Events
+async function isEventAlreadyProcessed(eventId) {
+  // TODO: Implementierung einer Event-Tracking-Tabelle
+  // um doppelte Webhook-Verarbeitung zu vermeiden
+  return false;
+}
+
+// Utility: Error-Reporting für kritische Webhook-Fehler
+function reportWebhookError(eventType, paymentIntentId, error) {
+  console.error('Critical webhook error:', {
+    eventType,
+    paymentIntentId,
+    error: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
+  
+  // TODO: Hier könnte ein externes Monitoring-System benachrichtigt werden
+  // z.B. Sentry, LogRocket, oder E-Mail-Benachrichtigung an Admins
+}
