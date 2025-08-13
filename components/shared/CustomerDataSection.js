@@ -1,4 +1,4 @@
-// components/shared/CustomerDataSection.js - PRODUCTION READY
+// components/shared/CustomerDataSection.js - PRODUCTION READY_1
 import React, { useState } from 'react';
 import { Mail, User, CheckCircle, Info } from 'lucide-react';
 
