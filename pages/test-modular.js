@@ -243,7 +243,7 @@ const FallbackPricingSection = ({ contractType, basePrice, selectedAddons, onAdd
   );
 };
 
-// ✅ KORRIGIERTE Fallback useContractForm Hook
+// ✅ KORRIGIERTE Fallback useContractForm Hook - MIT getDebugInfo
 const useFallbackContractForm = (contractType, basePrice) => {
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [formData, setFormData] = useState({
@@ -271,20 +271,25 @@ const useFallbackContractForm = (contractType, basePrice) => {
 
   const totalPrice = basePrice + calculateAddonTotal();
 
+  // ✅ WICHTIG: getDebugInfo Funktion hinzugefügt
+  const getDebugInfo = () => ({
+    contractType,
+    basePrice,
+    selectedAddons,
+    addonTotal: calculateAddonTotal(),
+    totalPrice,
+    mode: 'fallback',
+    isValid: !!formData.customer_email,
+    hasErrors: false
+  });
+
   return {
     formData,
     selectedAddons,
     totalPrice,
     handleAddonChange: setSelectedAddons,
     updateFormData: (updates) => setFormData(prev => ({ ...prev, ...updates })),
-    getDebugInfo: () => ({
-      contractType,
-      basePrice,
-      selectedAddons,
-      addonTotal: calculateAddonTotal(),
-      totalPrice,
-      mode: 'fallback'
-    })
+    getDebugInfo // ✅ KRITISCH: Diese Funktion fehlte!
   };
 };
 
