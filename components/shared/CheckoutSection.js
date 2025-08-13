@@ -1,4 +1,4 @@
-// components/shared/CheckoutSection.js - PRODUCTION READY
+// components/shared/CheckoutSection.js - PRODUCTION READY_1
 import React, { useState } from 'react';
 import { CreditCard, Lock, Check, AlertCircle, Info, ShoppingCart, Download, Mail, FileText } from 'lucide-react';
 
