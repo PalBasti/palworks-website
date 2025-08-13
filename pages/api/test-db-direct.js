@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     
     let tablesExist = false;
     let canInsert = false;
-    let insertError = null;
+    let insertErrorMessage = null;
     let tableInfo = {};
 
     // Test 1: Prüfen ob contracts Tabelle existiert
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
         if (insertError) {
           console.error('❌ Insert error:', insertError);
-          insertError = insertError.message;
+          insertErrorMessage = insertError.message;
         } else {
           canInsert = true;
           console.log('✅ Insert successful:', insertData.id);
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
         }
       } catch (error) {
         console.error('❌ Insert test failed:', error);
-        insertError = error.message;
+        insertErrorMessage = error.message;
       }
     }
 
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
       success: tablesExist && canInsert,
       tablesExist,
       canInsert,
-      insertError,
+      insertError: insertErrorMessage,
       tableInfo,
       timestamp: new Date().toISOString()
     });
