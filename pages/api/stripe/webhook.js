@@ -1,6 +1,5 @@
 // pages/api/stripe/webhook.js
 import Stripe from 'stripe';
-import { buffer } from 'micro';
 import { updateContractPaymentStatus } from '../../../lib/supabase/contractService';
 import { updatePaymentStatus, getPaymentLogByIntentId } from '../../../lib/supabase/paymentService';
 
@@ -20,8 +19,8 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    // Request-Body als Buffer lesen
-    const rawBody = await buffer(req);
+    // Request-Body als String lesen
+    const rawBody = JSON.stringify(req.body);
     const signature = req.headers['stripe-signature'];
 
     if (!signature) {
