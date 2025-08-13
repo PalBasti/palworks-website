@@ -1,331 +1,180 @@
-// components/shared/CustomerDataSection.js
-import { useState } from 'react';
-import { Mail, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+// components/shared/CustomerDataSection.js - PRODUCTION READY
+import React, { useState } from 'react';
+import { Mail, User, CheckCircle, Info } from 'lucide-react';
 
-export default function CustomerDataSection({ 
-  formData, 
-  handleChange, 
-  errors = {} 
-}) {
-  const [newsletterStatus, setNewsletterStatus] = useState('');
-  const [isSubmittingNewsletter, setIsSubmittingNewsletter] = useState(false);
-
-  // Newsletter-Anmeldung verarbeiten
-  const handleNewsletterSignup = async (email, shouldSignup) => {
-    if (!shouldSignup || !email || isSubmittingNewsletter) return;
-
-    try {
-      setIsSubmittingNewsletter(true);
-      setNewsletterStatus('loading');
-
-      // Korrigierter Import Newsletter Service
-      const { subscribeToNewsletter } = await import('../../lib/supabase/newsletterService');
-      
-      const result = await subscribeToNewsletter(email);
-      
-      if (result.success) {
-        if (result.alreadySubscribed) {
-          setNewsletterStatus('already_subscribed');
-        } else {
-          setNewsletterStatus('success');
-        }
-      } else {
-        setNewsletterStatus('error');
-        console.error('Newsletter signup failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Newsletter signup error:', error);
-      setNewsletterStatus('error');
-      
-      // Für Testing: Simuliere erfolgreiche Anmeldung
-      setNewsletterStatus('success');
-      console.log('Newsletter signup simulated for testing');
-    } finally {
-      setIsSubmittingNewsletter(false);
-    }
-  };
-
-  // Newsletter-Status bei E-Mail oder Checkbox-Änderung verarbeiten
-  const handleEmailChange = (e) => {
-    handleChange(e);
-    setNewsletterStatus(''); // Reset status when email changes
-  };
-
-  const handleNewsletterChange = (e) => {
-    const { checked } = e.target;
-    handleChange(e);
-    
-    // Automatisch anmelden wenn Checkbox aktiviert wird und E-Mail vorhanden ist
-    if (checked && formData.customer_email) {
-      handleNewsletterSignup(formData.customer_email, true);
-    } else if (!checked) {
-      setNewsletterStatus(''); // Reset status when unchecked
-    }
-  };
-
-  // Newsletter-Status Rendering
-  const renderNewsletterStatus = () => {
-    switch (newsletterStatus) {
-      case 'loading':
-        return (
-          <div className="flex items-center text-blue-600 text-sm mt-2">
-            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
-            Newsletter-Anmeldung wird verarbeitet...
-          </div>
-        );
-      case 'success':
-        return (
-          <div className="flex items-center text-green-600 text-sm mt-2">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Erfolgreich für Newsletter angemeldet!
-          </div>
-        );
-      case 'already_subscribed':
-        return (
-          <div className="flex items-center text-blue-600 text-sm mt-2">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Diese E-Mail ist bereits für den Newsletter angemeldet.
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex items-center text-red-600 text-sm mt-2">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            Newsletter-Anmeldung fehlgeschlagen. Bitte versuchen Sie es später erneut.
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+const CustomerDataSection = ({
+  formData = {},
+  handleChange = () => {},
+  errors = {},
+  showNewsletter = true,
+  compact = false,
+  showTitle = true
+}) => {
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [showEmailHint, setShowEmailHint] = useState(false);
 
   return (
-    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <Mail className="h-5 w-5 mr-2 text-indigo-600" />
-        Kontaktdaten für Vertragszustellung
-        <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full font-normal">
-          Verpflichtend
-        </span>
-      </h3>
+    <div className={`bg-white rounded-lg shadow-sm border ${compact ? 'p-4' : 'p-6'}`}>
+      {showTitle && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+            <User className="h-5 w-5 mr-2" />
+            Ihre Kontaktdaten
+          </h3>
+          <p className="text-sm text-gray-600">
+            Für die Vertragszustellung und weitere Kommunikation
+          </p>
+        </div>
+      )}
 
       {/* E-Mail Eingabe */}
       <div className="mb-4">
-        <label 
-          htmlFor="customer_email" 
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          E-Mail-Adresse <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          E-Mail-Adresse *
         </label>
         <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Mail className={`h-5 w-5 transition-colors duration-200 ${
+              emailFocused ? 'text-blue-500' : 'text-gray-400'
+            }`} />
+          </div>
           <input
             type="email"
-            id="customer_email"
             name="customer_email"
             value={formData.customer_email || ''}
-            onChange={handleEmailChange}
+            onChange={handleChange}
+            onFocus={() => {
+              setEmailFocused(true);
+              setShowEmailHint(true);
+            }}
+            onBlur={() => {
+              setEmailFocused(false);
+              setShowEmailHint(false);
+            }}
             className={`
-              w-full px-4 py-3 border rounded-md text-base
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              transition-colors duration-200
-              // components/shared/CustomerDataSection.js
-import { useState } from 'react';
-import { Mail, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
-
-export default function CustomerDataSection({ 
-  formData, 
-  handleChange, 
-  errors = {} 
-}) {
-  const [newsletterStatus, setNewsletterStatus] = useState('');
-  const [isSubmittingNewsletter, setIsSubmittingNewsletter] = useState(false);
-
-  // Newsletter-Anmeldung verarbeiten
-  const handleNewsletterSignup = async (email, shouldSignup) => {
-    if (!shouldSignup || !email || isSubmittingNewsletter) return;
-
-    try {
-      setIsSubmittingNewsletter(true);
-      setNewsletterStatus('loading');
-
-      // Import Newsletter Service (anpassen je nach deiner Struktur)
-      const { subscribeToNewsletter } = await import('../../lib/supabase/newsletterService');
-      
-      const result = await subscribeToNewsletter(email);
-      
-      if (result.success) {
-        if (result.alreadySubscribed) {
-          setNewsletterStatus('already_subscribed');
-        } else {
-          setNewsletterStatus('success');
-        }
-      } else {
-        setNewsletterStatus('error');
-        console.error('Newsletter signup failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Newsletter signup error:', error);
-      setNewsletterStatus('error');
-    } finally {
-      setIsSubmittingNewsletter(false);
-    }
-  };
-
-  // Newsletter-Status bei E-Mail oder Checkbox-Änderung verarbeiten
-  const handleEmailChange = (e) => {
-    handleChange(e);
-    setNewsletterStatus(''); // Reset status when email changes
-  };
-
-  const handleNewsletterChange = (e) => {
-    const { checked } = e.target;
-    handleChange(e);
-    
-    // Automatisch anmelden wenn Checkbox aktiviert wird und E-Mail vorhanden ist
-    if (checked && formData.customer_email) {
-      handleNewsletterSignup(formData.customer_email, true);
-    } else if (!checked) {
-      setNewsletterStatus(''); // Reset status when unchecked
-    }
-  };
-
-  // Newsletter-Status Rendering
-  const renderNewsletterStatus = () => {
-    switch (newsletterStatus) {
-      case 'loading':
-        return (
-          <div className="flex items-center text-blue-600 text-sm mt-2">
-            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
-            Newsletter-Anmeldung wird verarbeitet...
-          </div>
-        );
-      case 'success':
-        return (
-          <div className="flex items-center text-green-600 text-sm mt-2">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Erfolgreich für Newsletter angemeldet!
-          </div>
-        );
-      case 'already_subscribed':
-        return (
-          <div className="flex items-center text-blue-600 text-sm mt-2">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Diese E-Mail ist bereits für den Newsletter angemeldet.
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex items-center text-red-600 text-sm mt-2">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            Newsletter-Anmeldung fehlgeschlagen. Bitte versuchen Sie es später erneut.
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <Mail className="h-5 w-5 mr-2 text-indigo-600" />
-        Kontaktdaten für Vertragszustellung
-        <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full font-normal">
-          Verpflichtend
-        </span>
-      </h3>
-
-      {/* E-Mail Eingabe */}
-      <div className="mb-4">
-        <label 
-          htmlFor="customer_email" 
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          E-Mail-Adresse <span className="text-red-500">*</span>
-        </label>
-        <div className="relative">
-          <input
-            type="email"
-            id="customer_email"
-            name="customer_email"
-            value={formData.customer_email || ''}
-            onChange={handleEmailChange}
-            className={`
-              w-full px-4 py-3 border rounded-md text-base
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              transition-colors duration-200
+              block w-full pl-10 pr-3 py-3 border rounded-lg shadow-sm transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
               ${errors.customer_email 
-                ? 'border-red-300 bg-red-50' 
-                : 'border-gray-300 bg-white hover:border-gray-400'
+                ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500' 
+                : 'border-gray-300 focus:border-blue-500'
               }
             `}
             placeholder="ihre@email.de"
-            required
+            autoComplete="email"
           />
-          <Mail className="absolute right-3 top-3.5 h-5 w-5 text-gray-400" />
+          
+          {/* Success Indicator */}
+          {formData.customer_email && !errors.customer_email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customer_email) && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+          )}
         </div>
         
+        {/* Error Message */}
         {errors.customer_email && (
-          <p className="text-red-500 text-sm mt-2 flex items-center">
-            <AlertCircle className="h-4 w-4 mr-1" />
-            {errors.customer_email}
-          </p>
+          <div className="mt-2 flex items-center">
+            <Info className="h-4 w-4 text-red-500 mr-1" />
+            <p className="text-sm text-red-600">{errors.customer_email}</p>
+          </div>
         )}
         
-        <p className="text-sm text-gray-600 mt-2 flex items-center">
-          <Shield className="h-4 w-4 mr-1 text-green-500" />
-          Ihr fertiger Vertrag wird an diese Adresse gesendet
-        </p>
+        {/* Help Text */}
+        <div className={`mt-2 transition-all duration-200 ${
+          showEmailHint ? 'opacity-100' : 'opacity-70'
+        }`}>
+          <p className="text-xs text-gray-500 flex items-center">
+            <Info className="h-3 w-3 mr-1" />
+            Ihr Vertrag wird als PDF an diese Adresse gesendet
+          </p>
+        </div>
       </div>
 
       {/* Newsletter Anmeldung */}
-      <div className="border-t border-indigo-200 pt-4">
-        <div className="flex items-start space-x-3">
-          <div className="flex items-center h-6">
+      {showNewsletter && (
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+          <label className="flex items-start cursor-pointer">
             <input
               type="checkbox"
-              id="newsletter_signup"
               name="newsletter_signup"
               checked={formData.newsletter_signup || false}
-              onChange={handleNewsletterChange}
-              disabled={isSubmittingNewsletter}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              onChange={handleChange}
+              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
             />
-          </div>
-          <div className="flex-1">
-            <label 
-              htmlFor="newsletter_signup" 
-              className="text-sm font-medium text-gray-700 cursor-pointer"
-            >
-              Newsletter abonnieren (optional)
-            </label>
-            <p className="text-xs text-gray-600 mt-1">
-              Erhalten Sie Updates zu neuen Vertragsvorlagen, Rechtstipps und besonderen Angeboten. 
-              Abmeldung jederzeit möglich.
-            </p>
-            {renderNewsletterStatus()}
-          </div>
+            <div className="ml-3">
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-gray-700">
+                  📬 Newsletter abonnieren
+                </span>
+                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                  Optional
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                Erhalten Sie Tipps zu Mietrecht, neue Vertragsvorlagen und rechtliche Updates. 
+                Jederzeit abbestellbar, kein Spam.
+              </p>
+              
+              {/* Newsletter Benefits */}
+              <div className="mt-2 space-y-1">
+                <div className="text-xs text-gray-500 flex items-center">
+                  <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+                  Kostenlose Rechtstipps
+                </div>
+                <div className="text-xs text-gray-500 flex items-center">
+                  <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+                  Neue Vertragsvorlagen zuerst erhalten
+                </div>
+                <div className="text-xs text-gray-500 flex items-center">
+                  <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+                  Wichtige Gesetzesänderungen
+                </div>
+              </div>
+            </div>
+          </label>
         </div>
-      </div>
+      )}
 
-      {/* Datenschutz-Hinweis */}
-      <div className="mt-4 p-3 bg-white rounded border border-indigo-200">
-        <div className="flex items-start space-x-2">
-          <Shield className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+      {/* Compact Mode: Success Summary */}
+      {compact && formData.customer_email && !errors.customer_email && (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center">
+            <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+            <span className="text-sm font-medium text-green-800">
+              Kontaktdaten vollständig
+            </span>
+          </div>
+          <p className="text-xs text-green-700 mt-1">
+            Vertrag wird an {formData.customer_email} gesendet
+            {formData.newsletter_signup && ' • Newsletter abonniert'}
+          </p>
+        </div>
+      )}
+
+      {/* DSGVO Hinweis */}
+      <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="flex items-start">
+          <Info className="h-4 w-4 text-gray-500 mr-2 mt-0.5" />
           <div className="text-xs text-gray-600">
-            <p className="font-medium text-gray-700 mb-1">🔒 Datenschutz-Information</p>
+            <p className="font-medium mb-1">Datenschutz-Hinweis:</p>
             <p>
-              Ihre E-Mail wird ausschließlich für die Vertragszustellung verwendet. Bei Newsletter-Anmeldung 
-              erhalten Sie gelegentlich Updates (max. 1x pro Monat). Ihre Daten werden nicht an Dritte weitergegeben.
-            </p>
-            <p className="mt-1">
-              <a href="/datenschutz" className="text-blue-600 hover:text-blue-800 underline">
+              Ihre E-Mail-Adresse wird ausschließlich für die Vertragszustellung verwendet. 
+              Bei Newsletter-Anmeldung erhalten Sie zusätzlich unsere Rechtstipps. 
+              Mehr in unserer{' '}
+              <a 
+                href="/datenschutz" 
+                className="text-blue-600 hover:text-blue-700 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Datenschutzerklärung
-              </a>
+              </a>.
             </p>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default CustomerDataSection;
