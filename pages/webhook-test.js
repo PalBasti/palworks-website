@@ -59,26 +59,32 @@ export default function WebhookTestPage() {
 
     setIsLoading(true);
     try {
+      const contractId = testResults.contractCreation.data.contract_id;
+      console.log('🔄 Creating payment intent for contract:', contractId);
+
       const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contract_id: testResults.contractCreation.data.contract_id,
-          amount: 3990, // 39.90 EUR in Cents
-          currency: 'eur'
+          contractId: contractId  // ✅ FIX: Richtige Parameter-Benennung
         })
       });
 
       const result = await response.json();
+      console.log('💳 Payment Intent Response:', result);
+
       setTestResults(prev => ({
         ...prev,
         paymentIntent: {
           success: response.ok,
+          status: response.status,
           data: result,
+          contractId: contractId,
           timestamp: new Date().toISOString()
         }
       }));
     } catch (error) {
+      console.error('❌ Payment Intent Error:', error);
       setTestResults(prev => ({
         ...prev,
         paymentIntent: {
