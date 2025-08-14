@@ -10,35 +10,49 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+// WICHTIG: Raw Body für Webhook-Verification
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
+}
+
 export default async function handler(req, res) {
+  console.log('🔔 Webhook called:', req.method, req.headers['stripe-signature'] ? 'with signature' : 'without signature');
+
   // Nur POST-Requests erlauben
   if (req.method !== 'POST') {
+    console.log('❌ Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   let event;
 
   try {
-    // Request-Body als String lesen
-    const rawBody = JSON.stringify(req.body);
+    // Raw Body als Buffer lesen (für Stripe Signature Verification)
+    const buf = Buffer.from(JSON.stringify(req.body));
     const signature = req.headers['stripe-signature'];
 
     if (!signature) {
-      console.error('Missing Stripe signature');
+      console.error('❌ Missing Stripe signature header');
       return res.status(400).json({ error: 'Missing Stripe signature' });
     }
 
     if (!webhookSecret) {
-      console.error('Missing webhook secret in environment');
+      console.error('❌ Missing STRIPE_WEBHOOK_SECRET in environment');
       return res.status(500).json({ error: 'Webhook secret not configured' });
     }
 
+    console.log('🔐 Verifying webhook signature...');
+    
     // Event von Stripe verifizieren
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    console.log('Webhook event received:', event.type, event.id);
+    event = stripe.webhooks.constructEvent(buf, signature, webhookSecret);
+    console.log('✅ Webhook signature verified - Event:', event.type, 'ID:', event.id);
 
   } catch (error) {
-    console.error('Webhook signature verification failed:', error.message);
+    console.error('❌ Webhook signature verification failed:', error.message);
     return res.status(400).json({ 
       error: 'Webhook signature verification failed',
       message: error.message 
@@ -46,6 +60,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('🚀 Processing webhook event:', event.type);
+    
     // Event-Handler basierend auf Event-Typ
     switch (event.type) {
       case 'payment_intent.succeeded':
@@ -65,39 +81,50 @@ export default async function handler(req, res) {
         break;
 
       default:
-        console.log('Unhandled event type:', event.type);
+        console.log('ℹ️ Unhandled event type:', event.type);
         break;
     }
 
     // Erfolgreiche Verarbeitung bestätigen
+    console.log('✅ Webhook processing completed successfully');
     res.status(200).json({ 
       received: true,
       event_type: event.type,
-      event_id: event.id
+      event_id: event.id,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('❌ Error processing webhook:', error.message, error.stack);
     res.status(500).json({ 
       error: 'Webhook processing failed',
-      message: error.message 
+      message: error.message,
+      event_type: event.type,
+      event_id: event.id
     });
   }
 }
 
+// ========================================
+// EVENT HANDLERS
+// ========================================
+
 // Payment erfolgreich
 async function handlePaymentSucceeded(paymentIntent) {
-  console.log('Processing successful payment:', paymentIntent.id);
+  console.log('💰 Processing successful payment:', paymentIntent.id);
 
   try {
     const contractId = paymentIntent.metadata?.contract_id;
     
     if (!contractId) {
-      console.error('No contract ID in payment intent metadata');
+      console.error('❌ No contract_id in payment intent metadata');
+      console.log('Available metadata:', paymentIntent.metadata);
       return;
     }
 
-    // Contract-Status auf 'paid' setzen
+    console.log('📄 Updating contract status for ID:', contractId);
+
+    // 1. Contract-Status auf 'paid' setzen
     const contractResult = await updateContractPaymentStatus(
       contractId, 
       'paid', 
@@ -105,93 +132,109 @@ async function handlePaymentSucceeded(paymentIntent) {
     );
 
     if (!contractResult.success) {
-      console.error('Failed to update contract status:', contractResult.error);
-      return;
+      console.error('❌ Failed to update contract status:', contractResult.error);
+      throw new Error(`Contract update failed: ${contractResult.error}`);
     }
 
-    // Payment-Log aktualisieren
+    console.log('✅ Contract status updated to paid');
+
+    // 2. Payment-Log aktualisieren
     const logResult = await updatePaymentStatus(
       paymentIntent.id, 
       'succeeded',
       {
         amount_received: paymentIntent.amount_received,
         charges: paymentIntent.charges?.data || [],
-        receipt_email: paymentIntent.receipt_email
+        receipt_email: paymentIntent.receipt_email,
+        updated_at: new Date().toISOString()
       }
     );
 
     if (!logResult.success) {
-      console.warn('Failed to update payment log:', logResult.error);
+      console.warn('⚠️ Failed to update payment log (non-critical):', logResult.error);
+    } else {
+      console.log('✅ Payment log updated');
     }
 
-    console.log('Payment processing completed for contract:', contractId);
+    console.log('🎉 Payment processing completed successfully for contract:', contractId);
 
-    // TODO: Hier könnte E-Mail-Versand oder PDF-Generierung getriggert werden
+    // TODO: Hier könnten weitere Aktionen getriggert werden:
+    // - E-Mail versenden
+    // - PDF generieren
+    // - Webhook an andere Services
     // await sendContractEmail(contractId);
     // await generateContractPDF(contractId);
 
   } catch (error) {
-    console.error('Error handling payment success:', error);
+    console.error('❌ Error in handlePaymentSucceeded:', error.message, error.stack);
+    throw error; // Re-throw für globales Error-Handling
   }
 }
 
 // Payment fehlgeschlagen
 async function handlePaymentFailed(paymentIntent) {
-  console.log('Processing failed payment:', paymentIntent.id);
+  console.log('💸 Processing failed payment:', paymentIntent.id);
 
   try {
     const contractId = paymentIntent.metadata?.contract_id;
     
     if (!contractId) {
-      console.error('No contract ID in payment intent metadata');
+      console.error('❌ No contract_id in payment intent metadata');
       return;
     }
 
-    // Contract-Status auf 'failed' setzen
+    console.log('📄 Updating contract status for failed payment, Contract ID:', contractId);
+
+    // 1. Contract-Status auf 'payment_failed' setzen
     const contractResult = await updateContractPaymentStatus(
       contractId, 
-      'failed', 
+      'payment_failed', 
       paymentIntent.id
     );
 
     if (!contractResult.success) {
-      console.error('Failed to update contract status:', contractResult.error);
-      return;
+      console.error('❌ Failed to update contract status:', contractResult.error);
+    } else {
+      console.log('✅ Contract status updated to payment_failed');
     }
 
-    // Payment-Log aktualisieren mit Fehlerdetails
+    // 2. Payment-Log mit Fehlerdetails aktualisieren
     const logResult = await updatePaymentStatus(
       paymentIntent.id, 
       'failed',
       {
         last_payment_error: paymentIntent.last_payment_error,
-        cancellation_reason: paymentIntent.cancellation_reason
+        failure_code: paymentIntent.last_payment_error?.code,
+        failure_message: paymentIntent.last_payment_error?.message,
+        updated_at: new Date().toISOString()
       }
     );
 
     if (!logResult.success) {
-      console.warn('Failed to update payment log:', logResult.error);
+      console.warn('⚠️ Failed to update payment log:', logResult.error);
+    } else {
+      console.log('✅ Payment failure logged');
     }
 
-    console.log('Failed payment processing completed for contract:', contractId);
+    // TODO: Benachrichtigungen versenden
+    // await notifyPaymentFailure(contractId, paymentIntent.last_payment_error);
 
-    // TODO: Hier könnte eine Benachrichtigung an den Kunden gesendet werden
-    // await sendPaymentFailedEmail(contractId, paymentIntent.last_payment_error);
+    console.log('📝 Payment failure processing completed for contract:', contractId);
 
   } catch (error) {
-    console.error('Error handling payment failure:', error);
+    console.error('❌ Error in handlePaymentFailed:', error.message);
   }
 }
 
 // Payment storniert
 async function handlePaymentCanceled(paymentIntent) {
-  console.log('Processing canceled payment:', paymentIntent.id);
+  console.log('🚫 Processing canceled payment:', paymentIntent.id);
 
   try {
     const contractId = paymentIntent.metadata?.contract_id;
     
     if (!contractId) {
-      console.error('No contract ID in payment intent metadata');
+      console.error('❌ No contract_id in payment intent metadata');
       return;
     }
 
@@ -203,8 +246,9 @@ async function handlePaymentCanceled(paymentIntent) {
     );
 
     if (!contractResult.success) {
-      console.error('Failed to update contract status:', contractResult.error);
-      return;
+      console.error('❌ Failed to update contract status:', contractResult.error);
+    } else {
+      console.log('✅ Contract status updated to canceled');
     }
 
     // Payment-Log aktualisieren
@@ -212,69 +256,80 @@ async function handlePaymentCanceled(paymentIntent) {
       paymentIntent.id, 
       'canceled',
       {
-        cancellation_reason: paymentIntent.cancellation_reason
+        cancellation_reason: paymentIntent.cancellation_reason,
+        canceled_at: new Date().toISOString()
       }
     );
 
     if (!logResult.success) {
-      console.warn('Failed to update payment log:', logResult.error);
+      console.warn('⚠️ Failed to update payment log:', logResult.error);
+    } else {
+      console.log('✅ Payment cancellation logged');
     }
 
-    console.log('Canceled payment processing completed for contract:', contractId);
+    console.log('🗑️ Payment cancellation processing completed for contract:', contractId);
 
   } catch (error) {
-    console.error('Error handling payment cancellation:', error);
+    console.error('❌ Error in handlePaymentCanceled:', error.message);
   }
 }
 
 // Payment wird verarbeitet
 async function handlePaymentProcessing(paymentIntent) {
-  console.log('Processing payment in progress:', paymentIntent.id);
+  console.log('⏳ Processing payment in progress:', paymentIntent.id);
 
   try {
+    const contractId = paymentIntent.metadata?.contract_id;
+    
+    if (contractId) {
+      // Optional: Contract-Status auf 'processing' setzen
+      await updateContractPaymentStatus(contractId, 'processing', paymentIntent.id);
+    }
+
     // Payment-Log aktualisieren
     const logResult = await updatePaymentStatus(
       paymentIntent.id, 
       'processing',
       {
         processing_method: paymentIntent.processing?.method || 'unknown',
-        processing_type: paymentIntent.processing?.type || 'unknown'
+        processing_type: paymentIntent.processing?.type || 'unknown',
+        processing_started_at: new Date().toISOString()
       }
     );
 
     if (!logResult.success) {
-      console.warn('Failed to update payment log:', logResult.error);
+      console.warn('⚠️ Failed to update payment log:', logResult.error);
+    } else {
+      console.log('✅ Payment processing status updated');
     }
 
-    console.log('Processing payment status updated:', paymentIntent.id);
-
   } catch (error) {
-    console.error('Error handling payment processing:', error);
+    console.error('❌ Error in handlePaymentProcessing:', error.message);
   }
 }
+
+// ========================================
+// UTILITIES
+// ========================================
 
 // Utility: Contract-ID aus Payment Intent extrahieren
 function getContractIdFromPaymentIntent(paymentIntent) {
   return paymentIntent.metadata?.contract_id || null;
 }
 
-// Utility: Idempotenz-Check für Webhook-Events
-async function isEventAlreadyProcessed(eventId) {
-  // TODO: Implementierung einer Event-Tracking-Tabelle
-  // um doppelte Webhook-Verarbeitung zu vermeiden
-  return false;
-}
-
 // Utility: Error-Reporting für kritische Webhook-Fehler
 function reportWebhookError(eventType, paymentIntentId, error) {
-  console.error('Critical webhook error:', {
+  console.error('🚨 CRITICAL WEBHOOK ERROR:', {
     eventType,
     paymentIntentId,
     error: error.message,
     stack: error.stack,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
   });
   
-  // TODO: Hier könnte ein externes Monitoring-System benachrichtigt werden
-  // z.B. Sentry, LogRocket, oder E-Mail-Benachrichtigung an Admins
+  // TODO: Hier könnte externes Monitoring benachrichtigt werden
+  // - Sentry Error-Tracking
+  // - E-Mail an Admins
+  // - Slack-Benachrichtigung
 }
