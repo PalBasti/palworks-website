@@ -1,7 +1,7 @@
 // pages/api/stripe/webhook.js
 import Stripe from 'stripe';
 import { updateContractPaymentStatus } from '../../../lib/supabase/contractService';
-import { updatePaymentStatus, getPaymentLogByIntentId } from '../../../lib/supabase/paymentService';
+import { updatePaymentStatus } from '../../../lib/supabase/paymentService';
 
 // Stripe initialisieren
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -161,7 +161,6 @@ async function handlePaymentSucceeded(paymentIntent) {
     // TODO: Hier könnten weitere Aktionen getriggert werden:
     // - E-Mail versenden
     // - PDF generieren
-    // - Webhook an andere Services
     // await sendContractEmail(contractId);
     // await generateContractPDF(contractId);
 
@@ -215,9 +214,6 @@ async function handlePaymentFailed(paymentIntent) {
     } else {
       console.log('✅ Payment failure logged');
     }
-
-    // TODO: Benachrichtigungen versenden
-    // await notifyPaymentFailure(contractId, paymentIntent.last_payment_error);
 
     console.log('📝 Payment failure processing completed for contract:', contractId);
 
@@ -306,30 +302,4 @@ async function handlePaymentProcessing(paymentIntent) {
   } catch (error) {
     console.error('❌ Error in handlePaymentProcessing:', error.message);
   }
-}
-
-// ========================================
-// UTILITIES
-// ========================================
-
-// Utility: Contract-ID aus Payment Intent extrahieren
-function getContractIdFromPaymentIntent(paymentIntent) {
-  return paymentIntent.metadata?.contract_id || null;
-}
-
-// Utility: Error-Reporting für kritische Webhook-Fehler
-function reportWebhookError(eventType, paymentIntentId, error) {
-  console.error('🚨 CRITICAL WEBHOOK ERROR:', {
-    eventType,
-    paymentIntentId,
-    error: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
-  });
-  
-  // TODO: Hier könnte externes Monitoring benachrichtigt werden
-  // - Sentry Error-Tracking
-  // - E-Mail an Admins
-  // - Slack-Benachrichtigung
 }
