@@ -14,14 +14,17 @@ export default function WebhookTestPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contract_type: 'untermietvertrag',
+          customer_email: 'test@palworks-debug.de', // ✅ FIX: Fehlende customer_email hinzugefügt
           form_data: {
-            mieter_name: 'Test User',
-            mieter_email: 'test@example.com',
-            objekt_adresse: 'Teststraße 123',
-            miete_betrag: '500'
+            mieter_name: 'Test User Debug',
+            mieter_email: 'test@palworks-debug.de',
+            objekt_adresse: 'Teststraße 123, 12345 Berlin',
+            miete_betrag: '500',
+            mietvertrag_beginn: '2025-09-01'
           },
           selected_addons: ['rechtsberatung'],
-          total_amount: 39.90
+          total_amount: 39.90,
+          base_price: 19.90
         })
       });
 
