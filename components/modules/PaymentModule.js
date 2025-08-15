@@ -1,8 +1,7 @@
-// components/modules/PaymentModule.js - COMPLETE FIXED VERSION
-// Vollständig überarbeitete Version mit funktionierender E-Mail-Integration
+// components/modules/PaymentModule.js - COMPLETE FIXED VERSION (NO EXTERNAL DEPENDENCIES)
+// Vollständig überarbeitete Version mit funktionierender E-Mail-Integration - OHNE @heroicons/react
 
 import { useState, useEffect } from 'react'
-import { CheckCircleIcon, XCircleIcon, ClockIcon, CreditCardIcon, MailIcon, DocumentIcon } from '@heroicons/react/24/outline'
 
 export default function PaymentModule({ 
   amount, 
@@ -279,21 +278,21 @@ export default function PaymentModule({
     }
   };
 
-  // Status Icons
+  // Status Icons als Text-Emojis (statt Heroicons)
   const getStatusIcon = (status) => {
     switch(status) {
-      case 'processing': return <ClockIcon className="w-5 h-5 text-blue-500 animate-spin" />;
-      case 'succeeded': return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
-      case 'failed': return <XCircleIcon className="w-5 h-5 text-red-500" />;
+      case 'processing': return <span className="animate-spin text-blue-500">⏳</span>;
+      case 'succeeded': return <span className="text-green-500">✅</span>;
+      case 'failed': return <span className="text-red-500">❌</span>;
       default: return null;
     }
   };
 
   const getEmailStatusIcon = (status) => {
     switch(status) {
-      case 'sending': return <ClockIcon className="w-4 h-4 text-blue-500 animate-spin" />;
-      case 'sent': return <CheckCircleIcon className="w-4 h-4 text-green-500" />;
-      case 'failed': return <XCircleIcon className="w-4 h-4 text-red-500" />;
+      case 'sending': return <span className="animate-spin text-blue-500">📤</span>;
+      case 'sent': return <span className="text-green-500">✅</span>;
+      case 'failed': return <span className="text-red-500">❌</span>;
       default: return null;
     }
   };
@@ -312,7 +311,7 @@ export default function PaymentModule({
           </div>
           {customerEmail && (
             <div className="mt-2 text-xs text-gray-500 flex items-center">
-              <MailIcon className="w-4 h-4 mr-1" />
+              <span className="mr-1">📧</span>
               E-Mail-Versand an: {customerEmail}
             </div>
           )}
@@ -398,11 +397,11 @@ export default function PaymentModule({
         >
           {isProcessing ? (
             <div className="flex items-center justify-center space-x-2">
-              <ClockIcon className="w-5 h-5 animate-spin" />
+              <span className="animate-spin">⏳</span>
               <span>Verarbeitung läuft...</span>
             </div>
           ) : !customerEmail ? (
-            'E-Mail-Adresse erforderlich'
+            '📧 E-Mail-Adresse erforderlich'
           ) : (
             `Jetzt bezahlen - ${amount} ${currency}`
           )}
@@ -413,7 +412,7 @@ export default function PaymentModule({
       {pdfUrl && emailStatus === 'failed' && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="text-sm text-yellow-800 mb-2 flex items-center">
-            <DocumentIcon className="w-4 h-4 mr-1" />
+            <span className="mr-1">📄</span>
             E-Mail-Versand fehlgeschlagen, aber Ihr Vertrag steht zum Download bereit:
           </div>
           <a
@@ -430,7 +429,7 @@ export default function PaymentModule({
       {paymentStatus === 'succeeded' && emailStatus === 'sent' && (
         <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center space-x-2 text-green-800">
-            <CheckCircleIcon className="w-5 h-5" />
+            <span>✅</span>
             <span className="font-medium">Alles erledigt!</span>
           </div>
           <p className="text-sm text-green-700 mt-1">
@@ -453,7 +452,7 @@ export default function PaymentModule({
           }}
           className="w-full mt-4 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
         >
-          Erneut versuchen
+          🔄 Erneut versuchen
         </button>
       )}
 
