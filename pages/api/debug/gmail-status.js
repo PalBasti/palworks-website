@@ -125,4 +125,4 @@ Beispiel: GMAIL_SMTP_PASS=abcdefghijklmnop
 - Haupt-E-Mail verwenden, keine Aliase
 - App-Passwort, nicht normales Gmail-Passwort
 - Keine Leerzeichen im Passwort
-`;`
+`;
