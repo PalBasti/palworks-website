@@ -1,306 +1,473 @@
-// components/modules/PaymentModule.js - KORRIGIERTE VERSION OHNE SYNTAX-FEHLER
-import { useState } from 'react'
-import { CreditCard, Smartphone, Lock, CheckCircle, AlertCircle, Download, Mail } from 'lucide-react'
+// components/modules/PaymentModule.js - COMPLETE FIXED VERSION
+// Vollständig überarbeitete Version mit funktionierender E-Mail-Integration
 
-const PaymentModule = ({
-  amount,
-  currency = "€",
-  orderDescription = "PalWorks Vertragserstellung",
-  customerEmail = "",
-  formData = {},
+import { useState, useEffect } from 'react'
+import { CheckCircleIcon, XCircleIcon, ClockIcon, CreditCardIcon, MailIcon, DocumentIcon } from '@heroicons/react/24/outline'
+
+export default function PaymentModule({ 
+  amount, 
+  currency = 'EUR',
+  contractType = 'untermietvertrag',
+  formData,
   selectedAddons = [],
-  contractType = "untermietvertrag",
+  customerEmail,
   onPaymentSuccess,
   onPaymentError,
-  onPaymentInitiated,
-  enabledMethods = ['card', 'paypal', 'sofort'],
-  showSecurityBadge = true,
-  className = ""
-}) => {
+  onPaymentInitiated 
+}) {
   const [selectedMethod, setSelectedMethod] = useState('card')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState('idle') // idle, processing, success, error
+  const [paymentStatus, setPaymentStatus] = useState('idle')
   const [errorMessage, setErrorMessage] = useState('')
-  const [pdfUrl, setPdfUrl] = useState(null)
   const [contractId, setContractId] = useState(null)
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [emailStatus, setEmailStatus] = useState('idle') // idle, sending, sent, failed
+  const [emailMessage, setEmailMessage] = useState('')
 
-  const paymentMethods = [
-    {
-      id: 'card',
-      name: 'Kreditkarte',
-      icon: CreditCard,
+  const methods = [
+    { 
+      id: 'card', 
+      name: 'Kreditkarte', 
+      icon: '💳',
       description: 'Visa, Mastercard, American Express'
     },
-    {
-      id: 'paypal',
-      name: 'PayPal',
-      icon: () => (
-        <div className="w-5 h-5 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
-          P
-        </div>
-      ),
+    { 
+      id: 'paypal', 
+      name: 'PayPal', 
+      icon: '🟦',
       description: 'Sicher mit PayPal bezahlen'
     },
-    {
-      id: 'sofort',
-      name: 'Sofortüberweisung',
-      icon: () => (
-        <div className="w-5 h-5 bg-pink-500 rounded text-white text-xs flex items-center justify-center font-bold">
-          S
-        </div>
-      ),
+    { 
+      id: 'sofort', 
+      name: 'Sofortüberweisung', 
+      icon: '🏦',
       description: 'Direkt vom Bankkonto'
+    },
+    { 
+      id: 'giropay', 
+      name: 'Giropay', 
+      icon: '🇩🇪',
+      description: 'Deutsche Banken'
     }
   ]
 
-  const formatAmount = (amount) => {
-    return parseFloat(amount).toFixed(2).replace('.', ',')
+  const contractTypeNames = {
+    'untermietvertrag': 'Untermietvertrag',
+    'garagenvertrag': 'Garagenmietvertrag',
+    'wg-untermietvertrag': 'WG-Untermietvertrag'
   }
 
-  const handlePayment = async () => {
-    if (isProcessing) return
+  const orderDescription = `${contractTypeNames[contractType] || contractType} mit ${selectedAddons?.length || 0} Addon(s)`
 
-    setIsProcessing(true)
-    setPaymentStatus('processing')
-    setErrorMessage('')
-
-    if (onPaymentInitiated) {
-      onPaymentInitiated({
-        method: selectedMethod,
-        amount: amount,
-        formData: formData,
-        selectedAddons: selectedAddons
-      })
+  // E-Mail mit PDF versenden - FIXED VERSION (funktioniert mit API)
+  const sendContractEmail = async () => {
+    if (!customerEmail) {
+      console.warn('No customer email provided - skipping email send');
+      setEmailMessage('⚠️ Keine E-Mail-Adresse angegeben');
+      return false;
     }
 
     try {
-      // Demo payment - simulate processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Simulate success
-      const paymentResult = {
-        success: true,
-        paymentId: `demo_${Date.now()}`,
-        method: selectedMethod,
-        amount: amount,
-        pdfUrl: `/api/generate-pdf?type=${contractType}&demo=true`,
-        contractId: `contract_${Date.now()}`
+      setEmailStatus('sending');
+      setEmailMessage('E-Mail wird versendet...');
+
+      console.log('🔄 Sending contract email to:', customerEmail);
+      console.log('🔄 Contract type:', contractType);
+      console.log('🔄 Form data:', formData);
+      console.log('🔄 Selected addons:', selectedAddons);
+
+      const response = await fetch('/api/send-contract-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: customerEmail,
+          contractType: contractType,
+          formData: formData,
+          selectedAddons: selectedAddons || []
+          // Kein pdfUrl oder contractId nötig - API generiert alles selbst!
+        })
+      });
+
+      console.log('📧 Email API response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('📧 Email API error response:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: 'Unknown error', details: errorText };
+        }
+        
+        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}`);
       }
 
-      setPaymentStatus('success')
-      setPdfUrl(paymentResult.pdfUrl)
-      setContractId(paymentResult.contractId)
+      const result = await response.json();
+      console.log('📧 Email API success response:', result);
 
-      if (onPaymentSuccess) {
-        onPaymentSuccess(paymentResult)
+      if (result.success) {
+        setEmailStatus('sent');
+        setEmailMessage(`✅ E-Mail erfolgreich an ${customerEmail} versendet`);
+        console.log('✅ Contract email sent successfully:', result.messageId);
+        return true;
+      } else {
+        throw new Error(result.details || result.error || 'Unbekannter E-Mail-Fehler');
       }
-
     } catch (error) {
-      setPaymentStatus('error')
-      setErrorMessage(error.message || 'Ein unerwarteter Fehler ist aufgetreten')
+      console.error('❌ Email sending failed:', error);
+      setEmailStatus('failed');
+      setEmailMessage(`❌ E-Mail-Versand fehlgeschlagen: ${error.message}`);
+      return false;
+    }
+  };
+
+  // PDF generieren und downloaden (optional - als Fallback)
+  const generatePDF = async () => {
+    try {
+      console.log('🔄 Generating PDF for contract:', contractType);
       
-      if (onPaymentError) {
-        onPaymentError(error)
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formData,
+          selectedAddons,
+          contractType
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'PDF-Generierung fehlgeschlagen');
       }
-    } finally {
-      setIsProcessing(false)
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      // Automatischer Download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${contractTypeNames[contractType] || contractType}_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setPdfUrl(url);
+      console.log('✅ PDF generated and downloaded successfully');
+      return url;
+    } catch (error) {
+      console.error('❌ PDF Generation Error:', error);
+      throw error;
     }
   }
 
-  if (paymentStatus === 'success') {
-    return (
-      <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
+  // Demo Payment Processor
+  const processPayment = async (paymentData) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // 95% Erfolgsrate für realistische Demo
+        const success = Math.random() > 0.05;
+        
+        if (success) {
+          resolve({
+            success: true,
+            paymentId: `demo_${Date.now()}`,
+            transactionId: `txn_${Date.now()}`,
+            method: paymentData.method,
+            amount: paymentData.amount,
+            currency: paymentData.currency
+          });
+        } else {
+          resolve({
+            success: false,
+            error: 'Payment processing failed - demo mode'
+          });
+        }
+      }, 2000); // 2 Sekunden Verarbeitungszeit
+    });
+  };
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    setPaymentStatus('processing');
+    setErrorMessage('');
+    setEmailStatus('idle');
+    setEmailMessage('');
+
+    if (onPaymentInitiated) {
+      onPaymentInitiated(selectedMethod, amount);
+    }
+
+    try {
+      console.log('🔄 Starting payment process...');
+      console.log('🔄 Form data received:', formData);
+      console.log('🔄 Selected addons:', selectedAddons);
+      console.log('🔄 Customer email:', customerEmail);
+
+      // 1. Payment verarbeiten (Demo)
+      const paymentData = {
+        method: selectedMethod,
+        amount: amount,
+        currency: currency,
+        description: orderDescription,
+        customerEmail: customerEmail
+      };
+
+      console.log('🔄 Processing payment...', paymentData);
+      const paymentResponse = await processPayment(paymentData);
+      
+      if (paymentResponse.success) {
+        console.log('✅ Payment successful:', paymentResponse);
+        setPaymentStatus('succeeded');
+        setContractId(paymentResponse.transactionId);
+        
+        // 2. PDF generieren (als Fallback)
+        try {
+          console.log('🔄 Generating PDF...');
+          await generatePDF();
+          console.log('✅ PDF generated successfully');
+        } catch (pdfError) {
+          console.error('❌ PDF generation failed:', pdfError);
+          // PDF-Fehler loggen, aber E-Mail trotzdem versuchen
+        }
+        
+        // 3. E-Mail automatisch versenden (Hauptfunktion!)
+        let emailSent = false;
+        if (customerEmail) {
+          console.log('🔄 Sending email...');
+          emailSent = await sendContractEmail();
+        } else {
+          console.warn('⚠️ No customer email - skipping email send');
+          setEmailStatus('failed');
+          setEmailMessage('⚠️ Keine E-Mail-Adresse angegeben');
+        }
+
+        // 4. Success Callback
+        if (onPaymentSuccess) {
+          onPaymentSuccess({
+            paymentId: paymentResponse.paymentId,
+            transactionId: paymentResponse.transactionId,
+            amount: amount,
+            method: selectedMethod,
+            contractType: contractType,
+            emailSent: emailSent
+          });
+        }
+
+      } else {
+        throw new Error(paymentResponse.error || 'Payment failed');
+      }
+
+    } catch (error) {
+      console.error('❌ Payment process failed:', error);
+      setPaymentStatus('failed');
+      setErrorMessage(error.message);
+      setEmailStatus('failed');
+      setEmailMessage('Payment fehlgeschlagen - keine E-Mail versendet');
+      
+      if (onPaymentError) {
+        onPaymentError(error);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Status Icons
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'processing': return <ClockIcon className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'succeeded': return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
+      case 'failed': return <XCircleIcon className="w-5 h-5 text-red-500" />;
+      default: return null;
+    }
+  };
+
+  const getEmailStatusIcon = (status) => {
+    switch(status) {
+      case 'sending': return <ClockIcon className="w-4 h-4 text-blue-500 animate-spin" />;
+      case 'sent': return <CheckCircleIcon className="w-4 h-4 text-green-500" />;
+      case 'failed': return <XCircleIcon className="w-4 h-4 text-red-500" />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+      <h3 className="text-lg font-semibold mb-4">Zahlungsabwicklung</h3>
+      
+      {/* Bestellübersicht */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h4 className="font-medium text-gray-700 mb-2">Bestellübersicht</h4>
+        <div className="text-sm text-gray-600">
+          <div className="flex justify-between">
+            <span>{orderDescription}</span>
+            <span className="font-medium">{amount} {currency}</span>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Zahlung erfolgreich!
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Ihr Vertrag wird erstellt und per E-Mail gesendet.
-          </p>
-          
-          {pdfUrl && (
-            <button
-              onClick={() => window.open(pdfUrl, '_blank')}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              PDF herunterladen
-            </button>
+          {customerEmail && (
+            <div className="mt-2 text-xs text-gray-500 flex items-center">
+              <MailIcon className="w-4 h-4 mr-1" />
+              E-Mail-Versand an: {customerEmail}
+            </div>
+          )}
+          {selectedAddons && selectedAddons.length > 0 && (
+            <div className="mt-2 text-xs text-gray-500">
+              <strong>Addons:</strong> {selectedAddons.map(addon => addon.name || addon.id).join(', ')}
+            </div>
           )}
         </div>
       </div>
-    )
-  }
 
-  if (paymentStatus === 'error') {
-    return (
-      <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-            <AlertCircle className="h-8 w-8 text-red-600" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Zahlung fehlgeschlagen
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            {errorMessage || 'Bitte versuchen Sie es erneut.'}
-          </p>
-          <button
-            onClick={() => {
-              setPaymentStatus('idle')
-              setErrorMessage('')
-            }}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Erneut versuchen
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
-      <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Zahlung abschließen
-        </h3>
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-          <span className="text-sm text-gray-600">Gesamtbetrag:</span>
-          <span className="text-xl font-bold text-gray-900">
-            {formatAmount(amount)} {currency}
-          </span>
-        </div>
-      </div>
-
-      {customerEmail && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
-            <Mail className="h-5 w-5 text-blue-600 mr-2" />
-            <div>
-              <p className="font-medium text-blue-900">PDF-Versand an:</p>
-              <p className="text-blue-700 text-sm">{customerEmail}</p>
-            </div>
+      {/* Zahlungsmethoden */}
+      {paymentStatus === 'idle' && (
+        <div className="mb-6">
+          <h4 className="font-medium text-gray-700 mb-3">Zahlungsmethode wählen</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {methods.map((method) => (
+              <button
+                key={method.id}
+                onClick={() => setSelectedMethod(method.id)}
+                disabled={isProcessing}
+                className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                  selectedMethod === method.id
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                } ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-lg">{method.icon}</span>
+                  <span>{method.name}</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">{method.description}</div>
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Payment Method Selection */}
-      <div className="mb-6">
-        <h4 className="font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
-        <div className="grid grid-cols-1 gap-3">
-          {paymentMethods
-            .filter(method => enabledMethods.includes(method.id))
-            .map(method => {
-              const IconComponent = method.icon
-              return (
-                <label
-                  key={method.id}
-                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    selectedMethod === method.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value={method.id}
-                    checked={selectedMethod === method.id}
-                    onChange={(e) => setSelectedMethod(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center flex-grow">
-                    <IconComponent className="h-5 w-5 mr-3 text-gray-600" />
-                    <div>
-                      <div className="font-medium text-gray-900">{method.name}</div>
-                      <div className="text-sm text-gray-600">{method.description}</div>
-                    </div>
-                  </div>
-                  {selectedMethod === method.id && (
-                    <CheckCircle className="h-5 w-5 text-blue-600" />
-                  )}
-                </label>
-              )
-            })}
-        </div>
-      </div>
-
-      {/* Was Sie erhalten */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-        <h4 className="font-medium text-green-900 mb-2">✅ Das erhalten Sie:</h4>
-        <ul className="text-sm text-green-800 space-y-1">
-          <li>• Rechtssicherer {contractType} als PDF</li>
-          <li>• Sofortiger Download nach Zahlung</li>
-          <li>• E-Mail-Versand an {customerEmail || 'Ihre E-Mail'}</li>
-          {selectedAddons.length > 0 && (
-            <li>• {selectedAddons.length} zusätzliche(r) Service(s)</li>
+      {/* Payment Status */}
+      {paymentStatus !== 'idle' && (
+        <div className="mb-4 p-3 rounded-lg border">
+          <div className="flex items-center space-x-2">
+            {getStatusIcon(paymentStatus)}
+            <span className="text-sm font-medium">
+              {paymentStatus === 'processing' && 'Zahlung wird verarbeitet...'}
+              {paymentStatus === 'succeeded' && 'Zahlung erfolgreich!'}
+              {paymentStatus === 'failed' && 'Zahlung fehlgeschlagen'}
+            </span>
+          </div>
+          {errorMessage && (
+            <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
           )}
-        </ul>
-      </div>
+        </div>
+      )}
 
-      {/* Payment Button */}
-      <button
-        onClick={handlePayment}
-        disabled={isProcessing}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-      >
-        {isProcessing ? (
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-            Zahlung wird verarbeitet...
+      {/* E-Mail Status */}
+      {emailStatus !== 'idle' && (
+        <div className="mb-4 p-3 rounded-lg border border-blue-200 bg-blue-50">
+          <div className="flex items-center space-x-2">
+            {getEmailStatusIcon(emailStatus)}
+            <span className="text-sm font-medium text-blue-800">
+              {emailMessage}
+            </span>
           </div>
-        ) : (
-          <>Jetzt {formatAmount(amount)} {currency} bezahlen</>
-        )}
-      </button>
+          {emailStatus === 'sent' && (
+            <div className="mt-2 text-xs text-blue-700">
+              📧 Prüfen Sie auch Ihren Spam-Ordner!
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Additional Info */}
-      <div className="mt-4 text-center">
-        <p className="text-xs text-gray-500">
-          Mit dem Klick auf "Jetzt bezahlen" akzeptieren Sie unsere{' '}
-          <a href="/agb" className="text-blue-600 hover:underline">AGB</a> und{' '}
-          <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzerklärung</a>
-        </p>
-      </div>
+      {/* Bezahlen Button */}
+      {paymentStatus === 'idle' && (
+        <button
+          onClick={handlePayment}
+          disabled={isProcessing || !customerEmail}
+          className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
+            isProcessing || !customerEmail
+              ? 'bg-gray-400 cursor-not-allowed text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
+          }`}
+        >
+          {isProcessing ? (
+            <div className="flex items-center justify-center space-x-2">
+              <ClockIcon className="w-5 h-5 animate-spin" />
+              <span>Verarbeitung läuft...</span>
+            </div>
+          ) : !customerEmail ? (
+            'E-Mail-Adresse erforderlich'
+          ) : (
+            `Jetzt bezahlen - ${amount} ${currency}`
+          )}
+        </button>
+      )}
 
-      {/* Process Steps Info */}
-      <div className="mt-6 border-t pt-4">
-        <div className="flex justify-between items-center text-xs text-gray-600">
-          <div className="text-center flex-1">
-            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
-              <span className="text-blue-600 font-semibold text-xs">1</span>
-            </div>
-            <span>Bezahlen</span>
+      {/* PDF Download (Falls E-Mail fehlschlägt) */}
+      {pdfUrl && emailStatus === 'failed' && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="text-sm text-yellow-800 mb-2 flex items-center">
+            <DocumentIcon className="w-4 h-4 mr-1" />
+            E-Mail-Versand fehlgeschlagen, aber Ihr Vertrag steht zum Download bereit:
           </div>
-          <div className="w-4 h-px bg-gray-300 mx-1"></div>
-          <div className="text-center flex-1">
-            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
-              <span className="text-blue-600 font-semibold text-xs">2</span>
-            </div>
-            <span>PDF-Download</span>
+          <a
+            href={pdfUrl}
+            download={`${contractTypeNames[contractType]}_${new Date().toISOString().slice(0,10)}.pdf`}
+            className="inline-flex items-center px-3 py-2 bg-yellow-600 text-white text-sm font-medium rounded hover:bg-yellow-700 transition-colors"
+          >
+            📄 PDF herunterladen
+          </a>
+        </div>
+      )}
+
+      {/* Success State mit E-Mail-Info */}
+      {paymentStatus === 'succeeded' && emailStatus === 'sent' && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center space-x-2 text-green-800">
+            <CheckCircleIcon className="w-5 h-5" />
+            <span className="font-medium">Alles erledigt!</span>
           </div>
-          <div className="w-4 h-px bg-gray-300 mx-1"></div>
-          <div className="text-center flex-1">
-            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1">
-              <span className="text-blue-600 font-semibold text-xs">3</span>
-            </div>
-            <span>E-Mail-Versand</span>
+          <p className="text-sm text-green-700 mt-1">
+            Ihr {contractTypeNames[contractType]} wurde bezahlt und per E-Mail versendet.
+          </p>
+          <div className="mt-2 text-xs text-green-600">
+            📧 Empfänger: {customerEmail}
           </div>
         </div>
-      </div>
+      )}
 
-      {showSecurityBadge && (
-        <div className="mt-4 flex items-center justify-center text-xs text-gray-500">
-          <Lock className="h-3 w-3 mr-1" />
-          <span>256-Bit SSL verschlüsselt</span>
+      {/* Retry Button bei Fehlern */}
+      {paymentStatus === 'failed' && (
+        <button
+          onClick={() => {
+            setPaymentStatus('idle');
+            setErrorMessage('');
+            setEmailStatus('idle');
+            setEmailMessage('');
+          }}
+          className="w-full mt-4 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Erneut versuchen
+        </button>
+      )}
+
+      {/* Debug Info (nur in Development) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+          <div><strong>Debug:</strong></div>
+          <div>Status: {paymentStatus}</div>
+          <div>Email: {emailStatus}</div>
+          <div>Customer: {customerEmail || 'nicht gesetzt'}</div>
+          <div>Contract: {contractType}</div>
+          <div>Addons: {selectedAddons?.length || 0}</div>
         </div>
       )}
     </div>
-  )
+  );
 }
-
-export default PaymentModule
