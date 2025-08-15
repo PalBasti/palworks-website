@@ -5,13 +5,16 @@ import { updatePaymentStatus, logPaymentAttempt } from '../../../lib/supabase/pa
 /**
  * Test-Endpoint für Webhook-Simulation
  * ACHTUNG: Nur für Development/Testing verwenden!
- * In Production sollte nur der echte Webhook-Endpoint verwendet werden
  */
 export default async function handler(req, res) {
-  // Nur in Development-Umgebung erlauben
-  if (process.env.NODE_ENV === 'production') {
+  // Erlauben in Development ODER wenn explizit für Testing aktiviert
+  const isTestingEnabled = process.env.ENABLE_WEBHOOK_TESTING === 'true';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (!isDevelopment && !isTestingEnabled) {
     return res.status(403).json({ 
-      error: 'Webhook simulation not allowed in production' 
+      error: 'Webhook simulation not allowed in production',
+      hint: 'Set ENABLE_WEBHOOK_TESTING=true to enable testing'
     });
   }
 
