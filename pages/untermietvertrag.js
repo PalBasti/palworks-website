@@ -214,15 +214,10 @@ export default function UntermietvertragPage() {
                     </div>
                   </div>
 
-                  {/* Payment Module mit korrekter E-Mail */}
+                  {/* Payment Module mit korrigierter contractData Übergabe */}
                   <PaymentModule
                     contractType="untermietvertrag"
-                    contractData={{
-                      ...contractData,
-                      // ✅ SICHERSTELLEN: Alle E-Mail-Varianten sind verfügbar
-                      customer_email: getCustomerEmail(),
-                      customerEmail: getCustomerEmail()
-                    }}
+                    contractData={contractData} // ✅ KORRIGIERT: Übergebe die originale contractData
                     selectedAddons={getSelectedAddons()}
                     totalAmount={totalPrice}
                     onSuccess={handlePaymentSuccess}
