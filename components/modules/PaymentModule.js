@@ -1,27 +1,85 @@
-// components/modules/PaymentModule.js - COMPLETE FIXED VERSION (NO EXTERNAL DEPENDENCIES)
-// Vollständig überarbeitete Version mit funktionierender E-Mail-Integration - OHNE @heroicons/react
-
+// components/modules/PaymentModule.js - FIXED VERSION MIT ROBUSTEM E-MAIL-MAPPING
 import { useState, useEffect } from 'react'
 
 export default function PaymentModule({ 
   amount, 
   currency = 'EUR',
   contractType = 'untermietvertrag',
-  formData,
+  contractData, // ✅ WICHTIG: Verwende contractData statt formData
   selectedAddons = [],
-  customerEmail,
-  onPaymentSuccess,
-  onPaymentError,
+  totalAmount,
+  onSuccess,
+  onError,
   onPaymentInitiated 
 }) {
   const [selectedMethod, setSelectedMethod] = useState('card')
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState('idle')
   const [errorMessage, setErrorMessage] = useState('')
-  const [contractId, setContractId] = useState(null)
-  const [pdfUrl, setPdfUrl] = useState(null)
-  const [emailStatus, setEmailStatus] = useState('idle') // idle, sending, sent, failed
+  const [emailStatus, setEmailStatus] = useState('idle')
   const [emailMessage, setEmailMessage] = useState('')
+
+  // 🔧 FIX: Robuste E-Mail-Extraktion mit mehreren Fallbacks
+  const extractCustomerEmail = () => {
+    if (!contractData) return null;
+    
+    // Priorität: billing_email > customer_email > customerEmail
+    const email = contractData.billing_email || 
+                  contractData.customer_email || 
+                  contractData.customerEmail ||
+                  null;
+    
+    console.log('📧 PaymentModule - E-Mail-Extraktion:', {
+      contractData: !!contractData,
+      billing_email: contractData.billing_email,
+      customer_email: contractData.customer_email,
+      customerEmail: contractData.customerEmail,
+      extracted: email
+    });
+    
+    return email;
+  };
+
+  // 🔧 FIX: Sichere Form-Data-Extraktion
+  const getFormDataForEmail = () => {
+    if (!contractData) return {};
+    
+    // Kopiere alle relevanten Felder für E-Mail-Versand
+    return {
+      // Billing-Informationen
+      billing_name: contractData.billing_name,
+      billing_address: contractData.billing_address,
+      billing_postal: contractData.billing_postal,
+      billing_city: contractData.billing_city,
+      billing_email: contractData.billing_email,
+      
+      // Vertragsdetails
+      property_address: contractData.property_address,
+      property_postal: contractData.property_postal,
+      property_city: contractData.property_city,
+      rent_amount: contractData.rent_amount,
+      start_date: contractData.start_date,
+      end_date: contractData.end_date,
+      contract_type: contractData.contract_type,
+      
+      // Vertragsparteien
+      landlord_name: contractData.landlord_name,
+      landlord_address: contractData.landlord_address,
+      tenant_name: contractData.tenant_name,
+      tenant_address: contractData.tenant_address,
+      
+      // Weitere Felder
+      special_agreements: contractData.special_agreements,
+      pets_allowed: contractData.pets_allowed,
+      smoking_allowed: contractData.smoking_allowed,
+      
+      // Für andere Vertragstypen
+      ...contractData
+    };
+  };
+
+  const customerEmail = extractCustomerEmail();
+  const formDataForEmail = getFormDataForEmail();
 
   const methods = [
     { 
@@ -35,45 +93,73 @@ export default function PaymentModule({
       name: 'PayPal', 
       icon: '🟦',
       description: 'Sicher mit PayPal bezahlen'
-    },
-    { 
-      id: 'sofort', 
-      name: 'Sofortüberweisung', 
-      icon: '🏦',
-      description: 'Direkt vom Bankkonto'
-    },
-    { 
-      id: 'giropay', 
-      name: 'Giropay', 
-      icon: '🇩🇪',
-      description: 'Deutsche Banken'
     }
-  ]
+  ];
 
   const contractTypeNames = {
     'untermietvertrag': 'Untermietvertrag',
     'garagenvertrag': 'Garagenmietvertrag',
     'wg-untermietvertrag': 'WG-Untermietvertrag'
-  }
+  };
 
-  const orderDescription = `${contractTypeNames[contractType] || contractType} mit ${selectedAddons?.length || 0} Addon(s)`
+  // Contract in Database erstellen
+  const createContract = async () => {
+    try {
+      console.log('📝 Creating contract with data:', {
+        contractType,
+        customerEmail,
+        formData: formDataForEmail,
+        selectedAddons,
+        totalAmount: totalAmount || amount
+      });
 
-  // E-Mail mit PDF versenden - FIXED VERSION (funktioniert mit API)
+      const response = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractType,
+          customerEmail, // ✅ Verwende extrahierte E-Mail
+          formData: formDataForEmail, // ✅ Verwende komplette Form-Data
+          selectedAddons: selectedAddons || [],
+          totalAmount: totalAmount || amount
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Contract creation failed');
+      }
+
+      const result = await response.json();
+      console.log('✅ Contract created successfully:', result.contract_id);
+      return result.contract_id;
+
+    } catch (error) {
+      console.error('❌ Contract creation failed:', error);
+      throw error;
+    }
+  };
+
+  // E-Mail mit PDF versenden
   const sendContractEmail = async () => {
     if (!customerEmail) {
-      console.warn('No customer email provided - skipping email send');
-      setEmailMessage('⚠️ Keine E-Mail-Adresse angegeben');
+      console.warn('❌ No customer email - skipping email');
+      setEmailMessage('⚠️ Keine E-Mail-Adresse verfügbar');
       return false;
     }
 
     try {
       setEmailStatus('sending');
-      setEmailMessage('E-Mail wird versendet...');
+      setEmailMessage(`📧 E-Mail wird an ${customerEmail} gesendet...`);
 
-      console.log('🔄 Sending contract email to:', customerEmail);
-      console.log('🔄 Contract type:', contractType);
-      console.log('🔄 Form data:', formData);
-      console.log('🔄 Selected addons:', selectedAddons);
+      console.log('📧 Sending contract email:', {
+        email: customerEmail,
+        contractType,
+        formData: formDataForEmail,
+        selectedAddons
+      });
 
       const response = await fetch('/api/send-contract-email', {
         method: 'POST',
@@ -83,389 +169,235 @@ export default function PaymentModule({
         body: JSON.stringify({
           email: customerEmail,
           contractType: contractType,
-          formData: formData,
+          formData: formDataForEmail, // ✅ Vollständige Form-Data
           selectedAddons: selectedAddons || []
-          // Kein pdfUrl oder contractId nötig - API generiert alles selbst!
         })
       });
 
-      console.log('📧 Email API response status:', response.status);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('📧 Email API error response:', errorText);
-        
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: 'Unknown error', details: errorText };
-        }
-        
-        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'E-Mail-Versand fehlgeschlagen');
       }
 
       const result = await response.json();
-      console.log('📧 Email API success response:', result);
+      console.log('✅ E-Mail sent successfully:', result);
+      
+      setEmailStatus('sent');
+      setEmailMessage(`✅ E-Mail erfolgreich an ${customerEmail} gesendet!`);
+      return true;
 
-      if (result.success) {
-        setEmailStatus('sent');
-        setEmailMessage(`✅ E-Mail erfolgreich an ${customerEmail} versendet`);
-        console.log('✅ Contract email sent successfully:', result.messageId);
-        return true;
-      } else {
-        throw new Error(result.details || result.error || 'Unbekannter E-Mail-Fehler');
-      }
     } catch (error) {
-      console.error('❌ Email sending failed:', error);
+      console.error('❌ E-Mail send failed:', error);
       setEmailStatus('failed');
       setEmailMessage(`❌ E-Mail-Versand fehlgeschlagen: ${error.message}`);
       return false;
     }
   };
 
-  // PDF generieren und downloaden (optional - als Fallback)
-  const generatePDF = async () => {
-    try {
-      console.log('🔄 Generating PDF for contract:', contractType);
-      
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          formData,
-          selectedAddons,
-          contractType
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'PDF-Generierung fehlgeschlagen');
-      }
-
-      const pdfBlob = await response.blob();
-      const url = window.URL.createObjectURL(pdfBlob);
-      
-      // Automatischer Download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${contractTypeNames[contractType] || contractType}_${new Date().toISOString().slice(0,10)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setPdfUrl(url);
-      console.log('✅ PDF generated and downloaded successfully');
-      return url;
-    } catch (error) {
-      console.error('❌ PDF Generation Error:', error);
-      throw error;
+  // Payment verarbeiten (Demo-Implementation)
+  const processPayment = async () => {
+    if (!customerEmail) {
+      setErrorMessage('E-Mail-Adresse ist erforderlich für den Payment-Prozess');
+      return;
     }
-  }
 
-  // Demo Payment Processor
-  const processPayment = async (paymentData) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // 95% Erfolgsrate für realistische Demo
-        const success = Math.random() > 0.05;
-        
-        if (success) {
-          resolve({
-            success: true,
-            paymentId: `demo_${Date.now()}`,
-            transactionId: `txn_${Date.now()}`,
-            method: paymentData.method,
-            amount: paymentData.amount,
-            currency: paymentData.currency
-          });
-        } else {
-          resolve({
-            success: false,
-            error: 'Payment processing failed - demo mode'
-          });
-        }
-      }, 2000); // 2 Sekunden Verarbeitungszeit
-    });
-  };
-
-  const handlePayment = async () => {
     setIsProcessing(true);
     setPaymentStatus('processing');
     setErrorMessage('');
-    setEmailStatus('idle');
-    setEmailMessage('');
-
-    if (onPaymentInitiated) {
-      onPaymentInitiated(selectedMethod, amount);
-    }
 
     try {
-      console.log('🔄 Starting payment process...');
-      console.log('🔄 Form data received:', formData);
-      console.log('🔄 Selected addons:', selectedAddons);
-      console.log('🔄 Customer email:', customerEmail);
-
-      // 1. Payment verarbeiten (Demo)
-      const paymentData = {
-        method: selectedMethod,
-        amount: amount,
-        currency: currency,
-        description: orderDescription,
-        customerEmail: customerEmail
-      };
-
-      console.log('🔄 Processing payment...', paymentData);
-      const paymentResponse = await processPayment(paymentData);
+      console.log('💳 Processing payment...');
       
-      if (paymentResponse.success) {
-        console.log('✅ Payment successful:', paymentResponse);
-        setPaymentStatus('succeeded');
-        setContractId(paymentResponse.transactionId);
-        
-        // 2. PDF generieren (als Fallback)
-        try {
-          console.log('🔄 Generating PDF...');
-          await generatePDF();
-          console.log('✅ PDF generated successfully');
-        } catch (pdfError) {
-          console.error('❌ PDF generation failed:', pdfError);
-          // PDF-Fehler loggen, aber E-Mail trotzdem versuchen
-        }
-        
-        // 3. E-Mail automatisch versenden (Hauptfunktion!)
-        let emailSent = false;
-        if (customerEmail) {
-          console.log('🔄 Sending email...');
-          emailSent = await sendContractEmail();
-        } else {
-          console.warn('⚠️ No customer email - skipping email send');
-          setEmailStatus('failed');
-          setEmailMessage('⚠️ Keine E-Mail-Adresse angegeben');
-        }
+      // 1. Contract erstellen
+      const contractId = await createContract();
+      
+      // 2. Demo Payment (95% Erfolgsrate)
+      const paymentSuccess = Math.random() > 0.05;
+      
+      if (!paymentSuccess) {
+        throw new Error('Demo Payment fehlgeschlagen (5% Fehlerrate)');
+      }
 
-        // 4. Success Callback
-        if (onPaymentSuccess) {
-          onPaymentSuccess({
-            paymentId: paymentResponse.paymentId,
-            transactionId: paymentResponse.transactionId,
-            amount: amount,
-            method: selectedMethod,
-            contractType: contractType,
-            emailSent: emailSent
-          });
-        }
+      // 3. Payment erfolgreich
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Demo-Delay
+      setPaymentStatus('success');
 
-      } else {
-        throw new Error(paymentResponse.error || 'Payment failed');
+      // 4. E-Mail senden
+      await sendContractEmail();
+
+      // 5. Success-Callback
+      if (onSuccess) {
+        onSuccess({
+          contractId,
+          paymentMethod: selectedMethod,
+          amount: totalAmount || amount,
+          customerEmail,
+          emailSent: emailStatus === 'sent'
+        });
       }
 
     } catch (error) {
-      console.error('❌ Payment process failed:', error);
-      setPaymentStatus('failed');
+      console.error('❌ Payment failed:', error);
+      setPaymentStatus('error');
       setErrorMessage(error.message);
-      setEmailStatus('failed');
-      setEmailMessage('Payment fehlgeschlagen - keine E-Mail versendet');
       
-      if (onPaymentError) {
-        onPaymentError(error);
+      if (onError) {
+        onError(error);
       }
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Status Icons als Text-Emojis (statt Heroicons)
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'processing': return <span className="animate-spin text-blue-500">⏳</span>;
-      case 'succeeded': return <span className="text-green-500">✅</span>;
-      case 'failed': return <span className="text-red-500">❌</span>;
-      default: return null;
-    }
-  };
-
-  const getEmailStatusIcon = (status) => {
-    switch(status) {
-      case 'sending': return <span className="animate-spin text-blue-500">📤</span>;
-      case 'sent': return <span className="text-green-500">✅</span>;
-      case 'failed': return <span className="text-red-500">❌</span>;
-      default: return null;
-    }
-  };
-
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold mb-4">Zahlungsabwicklung</h3>
-      
-      {/* Bestellübersicht */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <h4 className="font-medium text-gray-700 mb-2">Bestellübersicht</h4>
-        <div className="text-sm text-gray-600">
-          <div className="flex justify-between">
-            <span>{orderDescription}</span>
-            <span className="font-medium">{amount} {currency}</span>
-          </div>
-          {customerEmail && (
-            <div className="mt-2 text-xs text-gray-500 flex items-center">
-              <span className="mr-1">📧</span>
-              E-Mail-Versand an: {customerEmail}
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          💳 Payment & Download
+        </h3>
+        
+        {/* E-Mail-Status anzeigen */}
+        <div className={`p-3 rounded-lg mb-4 ${
+          customerEmail 
+            ? 'bg-green-50 border border-green-200' 
+            : 'bg-red-50 border border-red-200'
+        }`}>
+          <div className="flex items-center">
+            <span className="mr-2">
+              {customerEmail ? '📧' : '⚠️'}
+            </span>
+            <div className="flex-1">
+              {customerEmail ? (
+                <>
+                  <p className="text-sm font-medium text-green-900">
+                    E-Mail-Versand an: {customerEmail}
+                  </p>
+                  <p className="text-xs text-green-700">
+                    Ihr Vertrag wird automatisch nach dem Payment gesendet
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-red-900">
+                    Keine E-Mail-Adresse verfügbar
+                  </p>
+                  <p className="text-xs text-red-700">
+                    Bitte füllen Sie das Formular vollständig aus
+                  </p>
+                </>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Methods */}
+      <div className="mb-6">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Zahlungsmethode wählen:</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {methods.map((method) => (
+            <button
+              key={method.id}
+              onClick={() => setSelectedMethod(method.id)}
+              className={`p-4 border rounded-lg text-left transition-all ${
+                selectedMethod === method.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center">
+                <span className="text-2xl mr-3">{method.icon}</span>
+                <div>
+                  <div className="font-medium text-gray-900">{method.name}</div>
+                  <div className="text-sm text-gray-600">{method.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Order Summary */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h4 className="font-medium text-gray-900 mb-2">Bestellübersicht:</h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span>{contractTypeNames[contractType] || contractType}</span>
+            <span>{(totalAmount || amount).toFixed(2)} €</span>
+          </div>
           {selectedAddons && selectedAddons.length > 0 && (
-            <div className="mt-2 text-xs text-gray-500">
-              <strong>Addons:</strong> {selectedAddons.map(addon => addon.name || addon.id).join(', ')}
+            <div className="text-gray-600">
+              + {selectedAddons.length} zusätzliche(s) Dokument(e)
             </div>
           )}
         </div>
       </div>
 
-      {/* Zahlungsmethoden */}
-      {paymentStatus === 'idle' && (
-        <div className="mb-6">
-          <h4 className="font-medium text-gray-700 mb-3">Zahlungsmethode wählen</h4>
-          <div className="grid grid-cols-2 gap-3">
-            {methods.map((method) => (
-              <button
-                key={method.id}
-                onClick={() => setSelectedMethod(method.id)}
-                disabled={isProcessing}
-                className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
-                  selectedMethod === method.id
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                } ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <div className="flex items-center justify-center space-x-2">
-                  <span className="text-lg">{method.icon}</span>
-                  <span>{method.name}</span>
-                </div>
-                <div className="text-xs text-gray-500 mt-1">{method.description}</div>
-              </button>
-            ))}
-          </div>
+      {/* Payment Button */}
+      <button
+        onClick={processPayment}
+        disabled={isProcessing || !customerEmail}
+        className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
+          isProcessing || !customerEmail
+            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        }`}
+      >
+        {isProcessing ? (
+          <span className="flex items-center justify-center">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Verarbeitung...
+          </span>
+        ) : (
+          `Jetzt kaufen - ${(totalAmount || amount).toFixed(2)} €`
+        )}
+      </button>
+
+      {/* Status Messages */}
+      {errorMessage && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{errorMessage}</p>
         </div>
       )}
 
-      {/* Payment Status */}
-      {paymentStatus !== 'idle' && (
-        <div className="mb-4 p-3 rounded-lg border">
-          <div className="flex items-center space-x-2">
-            {getStatusIcon(paymentStatus)}
-            <span className="text-sm font-medium">
-              {paymentStatus === 'processing' && 'Zahlung wird verarbeitet...'}
-              {paymentStatus === 'succeeded' && 'Zahlung erfolgreich!'}
-              {paymentStatus === 'failed' && 'Zahlung fehlgeschlagen'}
-            </span>
-          </div>
-          {errorMessage && (
-            <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
-          )}
-        </div>
-      )}
-
-      {/* E-Mail Status */}
-      {emailStatus !== 'idle' && (
-        <div className="mb-4 p-3 rounded-lg border border-blue-200 bg-blue-50">
-          <div className="flex items-center space-x-2">
-            {getEmailStatusIcon(emailStatus)}
-            <span className="text-sm font-medium text-blue-800">
-              {emailMessage}
-            </span>
-          </div>
-          {emailStatus === 'sent' && (
-            <div className="mt-2 text-xs text-blue-700">
-              📧 Prüfen Sie auch Ihren Spam-Ordner!
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bezahlen Button */}
-      {paymentStatus === 'idle' && (
-        <button
-          onClick={handlePayment}
-          disabled={isProcessing || !customerEmail}
-          className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
-            isProcessing || !customerEmail
-              ? 'bg-gray-400 cursor-not-allowed text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
-          }`}
-        >
-          {isProcessing ? (
-            <div className="flex items-center justify-center space-x-2">
-              <span className="animate-spin">⏳</span>
-              <span>Verarbeitung läuft...</span>
-            </div>
-          ) : !customerEmail ? (
-            '📧 E-Mail-Adresse erforderlich'
-          ) : (
-            `Jetzt bezahlen - ${amount} ${currency}`
-          )}
-        </button>
-      )}
-
-      {/* PDF Download (Falls E-Mail fehlschlägt) */}
-      {pdfUrl && emailStatus === 'failed' && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="text-sm text-yellow-800 mb-2 flex items-center">
-            <span className="mr-1">📄</span>
-            E-Mail-Versand fehlgeschlagen, aber Ihr Vertrag steht zum Download bereit:
-          </div>
-          <a
-            href={pdfUrl}
-            download={`${contractTypeNames[contractType]}_${new Date().toISOString().slice(0,10)}.pdf`}
-            className="inline-flex items-center px-3 py-2 bg-yellow-600 text-white text-sm font-medium rounded hover:bg-yellow-700 transition-colors"
-          >
-            📄 PDF herunterladen
-          </a>
-        </div>
-      )}
-
-      {/* Success State mit E-Mail-Info */}
-      {paymentStatus === 'succeeded' && emailStatus === 'sent' && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center space-x-2 text-green-800">
-            <span>✅</span>
-            <span className="font-medium">Alles erledigt!</span>
-          </div>
-          <p className="text-sm text-green-700 mt-1">
-            Ihr {contractTypeNames[contractType]} wurde bezahlt und per E-Mail versendet.
+      {emailMessage && (
+        <div className={`mt-4 p-3 rounded-lg ${
+          emailStatus === 'sent' 
+            ? 'bg-green-50 border border-green-200' 
+            : emailStatus === 'failed'
+            ? 'bg-red-50 border border-red-200'
+            : 'bg-blue-50 border border-blue-200'
+        }`}>
+          <p className={`text-sm ${
+            emailStatus === 'sent' 
+              ? 'text-green-700' 
+              : emailStatus === 'failed'
+              ? 'text-red-700'
+              : 'text-blue-700'
+          }`}>
+            {emailMessage}
           </p>
-          <div className="mt-2 text-xs text-green-600">
-            📧 Empfänger: {customerEmail}
-          </div>
         </div>
       )}
 
-      {/* Retry Button bei Fehlern */}
-      {paymentStatus === 'failed' && (
-        <button
-          onClick={() => {
-            setPaymentStatus('idle');
-            setErrorMessage('');
-            setEmailStatus('idle');
-            setEmailMessage('');
-          }}
-          className="w-full mt-4 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          🔄 Erneut versuchen
-        </button>
-      )}
-
-      {/* Debug Info (nur in Development) */}
+      {/* Debug Info (Development only) */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-          <div><strong>Debug:</strong></div>
-          <div>Status: {paymentStatus}</div>
-          <div>Email: {emailStatus}</div>
-          <div>Customer: {customerEmail || 'nicht gesetzt'}</div>
-          <div>Contract: {contractType}</div>
-          <div>Addons: {selectedAddons?.length || 0}</div>
-        </div>
+        <details className="mt-4">
+          <summary className="text-xs text-gray-500 cursor-pointer">Debug Info anzeigen</summary>
+          <pre className="text-xs text-gray-600 bg-gray-100 p-2 rounded mt-1 overflow-auto max-h-32">
+            {JSON.stringify({
+              hasContractData: !!contractData,
+              extractedEmail: customerEmail,
+              hasFormData: Object.keys(formDataForEmail).length,
+              selectedAddons: selectedAddons?.length || 0,
+              totalAmount: totalAmount || amount
+            }, null, 2)}
+          </pre>
+        </details>
       )}
     </div>
   );
