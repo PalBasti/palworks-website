@@ -1,339 +1,314 @@
-// pages/untermietvertrag.js - ERWEITERT MIT SEPARATEN DOWNLOADS
-import { useState, useCallback, useMemo } from 'react'
-import { Stepper } from '../components/ui/stepper'
-import { Button } from '../components/ui/button'
-import { CheckCircle, FileText, Mail, AlertCircle } from 'lucide-react'
+// pages/untermietvertrag.js - KORRIGIERTE VERSION MIT E-MAIL-MAPPING
+import { useState } from 'react'
+import Head from 'next/head'
+import Link from 'next/link'
+import { FileText, ArrowLeft, CheckCircle, Download, Mail } from 'lucide-react'
 import UntermietvertragForm from '../components/UntermietvertragForm'
 import PaymentModule from '../components/modules/PaymentModule'
 import PricingSection from '../components/shared/PricingSection'
-// ✅ NEUE IMPORTS FÜR SEPARATE DOWNLOADS
-import { DownloadIntegrationWrapper } from '../components/DownloadIntegrationWrapper'
-
-const steps = [
-  { title: 'Vertragsdaten', description: 'Formular ausfüllen' },
-  { title: 'Prüfung & Zahlung', description: 'Daten prüfen und bezahlen' },
-  { title: 'Fertig', description: 'Vertrag erhalten' }
-]
+import { useContractForm } from '../hooks/useContractForm'
 
 export default function UntermietvertragPage() {
-  const [currentStep, setCurrentStep] = useState('form')
-  const [contractData, setContractData] = useState({})
+  const [currentStep, setCurrentStep] = useState('form') // form, preview, success
   const [paymentResult, setPaymentResult] = useState(null)
-  const [selectedAddons, setSelectedAddons] = useState([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  // ✅ NEUE STATES FÜR DOWNLOAD-MANAGEMENT
-  const [downloadStatus, setDownloadStatus] = useState(null)
-  const [showDownloads, setShowDownloads] = useState(false)
 
-  // Basispreis für Untermietverträge
-  const basePrice = 12.90
+  // ✅ VERWENDE MODULAREN HOOK
+  const {
+    formData: contractData,
+    selectedAddons,
+    totalPrice,
+    handleInputChange,
+    handleAddonChange,
+    updateFormData
+  } = useContractForm('untermietvertrag', 12.90)
 
-  // Addon-Handler mit useCallback für Performance
-  const handleAddonChange = useCallback((newAddons) => {
-    setSelectedAddons(newAddons)
-  }, [])
-
-  // Gesamtpreis berechnen - useMemo für Performance
-  const totalPrice = useMemo(() => {
-    // Mock-Preise für die Addons
-    const addonPrices = {
-      'explanation': 9.90,
-      'protocol': 9.90,
-      'uebergabeprotokoll': 9.90,
-      'rechtsberatung': 29.90
+  // 🔧 FIX: E-Mail-Field-Mapping von billing_email zu customer_email
+  const handleFormSubmit = (data) => {
+    console.log('📋 Original form data:', data)
+    
+    // ✅ KRITISCH: E-Mail-Mapping billing_email -> customer_email
+    const mappedData = {
+      ...data,
+      customer_email: data.billing_email || data.customer_email, // Priorität: billing_email
+      // Zusätzlich: Backup für verschiedene Namenskonventionen
+      customerEmail: data.billing_email || data.customer_email
     }
     
-    const addonTotal = selectedAddons.reduce((sum, addonKey) => {
-      return sum + (addonPrices[addonKey] || 0)
-    }, 0)
+    console.log('📋 Mapped form data with customer_email:', mappedData)
+    console.log('🔍 Customer email extracted:', mappedData.customer_email)
     
-    return basePrice + addonTotal
-  }, [selectedAddons, basePrice])
+    updateFormData(mappedData)
+    setCurrentStep('preview')
+  }
 
-  // Formular Submit Handler
-  const handleFormSubmit = async (formData) => {
-    try {
-      setIsSubmitting(true)
-      setContractData(formData)
-      setCurrentStep('payment')
-    } catch (error) {
-      console.error('Form submission error:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleBackToForm = () => {
+    setCurrentStep('form')
   }
 
   const handlePaymentSuccess = (result) => {
+    console.log('💳 Payment successful:', result)
     setPaymentResult(result)
     setCurrentStep('success')
-    // ✅ DOWNLOADS NACH ERFOLGREICHEM PAYMENT ANZEIGEN
-    setShowDownloads(true)
   }
 
   const handlePaymentError = (error) => {
-    console.error('Payment error:', error)
-    // Error-Handling kann hier erweitert werden
-  }
-
-  // ✅ NEUE DOWNLOAD-EVENT-HANDLER
-  const handleDownloadStart = () => {
-    setDownloadStatus('downloading')
-    console.log('🔍 Downloads started for Untermietvertrag')
-  }
-
-  const handleDownloadComplete = (result) => {
-    setDownloadStatus('completed')
-    console.log('✅ Downloads completed:', result)
-    // Optional: Success-Nachricht anzeigen
-  }
-
-  const handleDownloadError = (error) => {
-    setDownloadStatus('error')
-    console.error('❌ Download failed:', error)
+    console.error('❌ Payment failed:', error)
+    alert('Zahlung fehlgeschlagen: ' + error.message)
   }
 
   const getSelectedAddons = () => {
     return selectedAddons || []
   }
 
+  // 🔍 DEBUG: E-Mail-Adresse für Preview-Anzeige extrahieren
+  const getCustomerEmail = () => {
+    // Mehrere Fallback-Optionen für E-Mail-Extraktion
+    return contractData.customer_email || 
+           contractData.customerEmail || 
+           contractData.billing_email || 
+           'Keine E-Mail-Adresse verfügbar'
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
+    <>
+      <Head>
+        <title>Untermietvertrag erstellen - PalWorks</title>
+        <meta name="description" content="Rechtssicherer Untermietvertrag für ganze Wohnungen. Optional mit professionellem Übergabeprotokoll." />
+      </Head>
+
+      <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Untermietvertrag erstellen
-          </h1>
-          <p className="text-lg text-gray-600">
-            Rechtssicher • Anwaltlich geprüft • Sofort verfügbar
-          </p>
-        </div>
-
-        {/* Progress Stepper */}
-        <div className="mb-8">
-          <Stepper 
-            steps={steps} 
-            currentStep={currentStep === 'form' ? 0 : currentStep === 'payment' ? 1 : 2} 
-          />
-        </div>
-
-        {/* Schritt 1: Formular */}
-        {currentStep === 'form' && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Linke Spalte: Formular (2 Spalten) */}
-            <div className="lg:col-span-2">
-              <UntermietvertragForm
-                onSubmit={handleFormSubmit}
-                isSubmitting={isSubmitting}
-                initialData={contractData}
-              />
+        <div className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-6">
+              <div className="flex items-center">
+                <Link href="/" className="flex items-center text-blue-600 hover:text-blue-700 mr-4">
+                  <ArrowLeft className="h-5 w-5 mr-2" />
+                  Zurück zur Übersicht
+                </Link>
+                <div className="flex items-center">
+                  <FileText className="h-6 w-6 text-blue-600 mr-2" />
+                  <h1 className="text-xl font-semibold text-gray-900">Untermietvertrag</h1>
+                </div>
+              </div>
+              
+              {/* Step Indicator */}
+              <div className="flex items-center space-x-4">
+                <div className={`flex items-center ${currentStep === 'form' ? 'text-blue-600' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep === 'form' ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    1
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Formular</span>
+                </div>
+                <div className="w-8 h-px bg-gray-200"></div>
+                <div className={`flex items-center ${currentStep === 'preview' ? 'text-blue-600' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep === 'preview' ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    2
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Vorschau & Zahlung</span>
+                </div>
+                <div className="w-8 h-px bg-gray-200"></div>
+                <div className={`flex items-center ${currentStep === 'success' ? 'text-green-600' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep === 'success' ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                    {currentStep === 'success' ? <CheckCircle className="h-5 w-5" /> : '3'}
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Fertig</span>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            {/* Rechte Spalte: Preisübersicht (1 Spalte) */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-6">
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {currentStep === 'form' && (
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Form */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                    Vertragsdaten eingeben
+                  </h2>
+                  <UntermietvertragForm 
+                    onSubmit={handleFormSubmit}
+                    initialData={contractData}
+                  />
+                </div>
+              </div>
+
+              {/* Pricing Sidebar */}
+              <div className="lg:col-span-1">
                 <PricingSection
                   contractType="untermietvertrag"
-                  basePrice={basePrice}
-                  selectedAddons={selectedAddons}
+                  basePrice={12.90}
+                  selectedAddons={getSelectedAddons()}
                   onAddonChange={handleAddonChange}
-                  className="w-full"
+                  totalPrice={totalPrice}
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Schritt 2: Payment */}
-        {currentStep === 'payment' && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Linke Spalte: Vertragsdaten + Addons (2 Spalten) */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Bestehende Vertragsdaten Zusammenfassung */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  📋 Ihre Vertragsdaten
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Untermieter:</span>
-                    <p className="text-gray-900">
-                      {contractData.tenant_first_name} {contractData.tenant_last_name}
-                    </p>
+          {currentStep === 'preview' && (
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Preview */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Vertrag bestellen
+                    </h2>
+                    <button
+                      onClick={handleBackToForm}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      Bearbeiten
+                    </button>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Hauptmieter:</span>
-                    <p className="text-gray-900">
-                      {contractData.landlord_first_name} {contractData.landlord_last_name}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Mietobjekt:</span>
-                    <p className="text-gray-900">
-                      {contractData.property_address}, {contractData.property_postal} {contractData.property_city}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Miete:</span>
-                    <p className="text-gray-900">
-                      {contractData.rent_amount}€ monatlich
-                    </p>
-                  </div>
-                </div>
 
-                {/* ✅ NEUE MODULARE PRICING SECTION */}
-                <div className="mt-6 pt-6 border-t">
-                  <PricingSection
+                  {/* 🔍 DEBUG: E-Mail-Anzeige zur Verifizierung */}
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center">
+                      <Mail className="h-5 w-5 text-blue-600 mr-2" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">
+                          E-Mail-Versand an: {getCustomerEmail()}
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          Ihr Vertrag wird nach dem Payment automatisch an diese Adresse gesendet.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contract Summary */}
+                  <div className="border rounded-lg p-4 mb-6">
+                    <h3 className="font-medium text-gray-900 mb-3">Vertragsinformationen</h3>
+                    <div className="space-y-2 text-sm">
+                      {contractData.property_address && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Objekt:</span>
+                          <span className="text-gray-900">{contractData.property_address}</span>
+                        </div>
+                      )}
+                      {contractData.rent_amount && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Miete:</span>
+                          <span className="text-gray-900">{contractData.rent_amount} €</span>
+                        </div>
+                      )}
+                      {contractData.start_date && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Mietbeginn:</span>
+                          <span className="text-gray-900">
+                            {new Date(contractData.start_date).toLocaleDateString('de-DE')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payment Module mit korrekter E-Mail */}
+                  <PaymentModule
                     contractType="untermietvertrag"
-                    basePrice={12.90}
-                    selectedAddons={selectedAddons}
-                    onAddonChange={handleAddonChange}
-                    showTitle={false}
-                    compact={true}
+                    contractData={{
+                      ...contractData,
+                      // ✅ SICHERSTELLEN: Alle E-Mail-Varianten sind verfügbar
+                      customer_email: getCustomerEmail(),
+                      customerEmail: getCustomerEmail()
+                    }}
+                    selectedAddons={getSelectedAddons()}
+                    totalAmount={totalPrice}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
                   />
                 </div>
               </div>
 
-              {/* PaymentModule */}
-              <PaymentModule
-                contractType="untermietvertrag"
-                contractData={contractData}
-                selectedAddons={getSelectedAddons()}
-                totalAmount={totalPrice}
-                onPaymentSuccess={handlePaymentSuccess}
-                onPaymentError={handlePaymentError}
-              />
-            </div>
-
-            {/* Rechte Spalte: Was Sie erhalten */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-6">
-                <div className="bg-white rounded-lg shadow-lg p-6">
+              {/* Order Summary */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    📄 Das erhalten Sie
+                    Bestellübersicht
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Rechtssicherer Untermietvertrag</span>
-                    </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Sofortiger PDF-Download</span>
-                    </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      <span className="text-sm">E-Mail-Versand</span>
-                    </div>
-                    {selectedAddons?.includes('protocol') && (
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span className="text-sm">Übergabeprotokoll</span>
-                      </div>
-                    )}
-                    {selectedAddons?.includes('explanation') && (
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span className="text-sm">Vertragserläuterungen</span>
-                      </div>
-                    )}
-                  </div>
                   
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Gesamtpreis:</strong> {totalPrice.toFixed(2)}€
-                    </p>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Untermietvertrag</span>
+                      <span className="text-gray-900">12,90 €</span>
+                    </div>
+                    
+                    {getSelectedAddons().map(addon => (
+                      <div key={addon} className="flex justify-between text-sm">
+                        <span className="text-gray-600">+ {addon}</span>
+                        <span className="text-gray-900">
+                          {addon === 'explanation' ? '9,90 €' : '7,90 €'}
+                        </span>
+                      </div>
+                    ))}
+                    
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between font-semibold">
+                        <span className="text-gray-900">Gesamtsumme</span>
+                        <span className="text-blue-600">{totalPrice.toFixed(2)} €</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Schritt 3: Success mit Downloads */}
-        {currentStep === 'success' && (
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                🎉 Zahlung erfolgreich!
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                Ihr Untermietvertrag wurde erfolgreich erstellt und bezahlt.
-              </p>
-
-              {/* ✅ NEUE DOWNLOAD-INTEGRATION */}
-              {showDownloads && (
-                <div className="mb-8">
-                  <DownloadIntegrationWrapper
-                    formData={contractData}
-                    selectedAddons={selectedAddons}
-                    contractType="untermietvertrag"
-                    customerEmail={contractData.customer_email}
-                    totalPrice={totalPrice}
-                    onDownloadStart={handleDownloadStart}
-                    onDownloadComplete={handleDownloadComplete}
-                    onDownloadError={handleDownloadError}
-                    className="max-w-lg mx-auto"
-                  />
+          {currentStep === 'success' && (
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
-              )}
-
-              {/* Download Status Anzeige */}
-              {downloadStatus && (
-                <div className="mb-6">
-                  {downloadStatus === 'downloading' && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800">📄 Downloads werden vorbereitet...</p>
-                    </div>
-                  )}
-                  {downloadStatus === 'completed' && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800">✅ Alle Dokumente erfolgreich heruntergeladen!</p>
-                    </div>
-                  )}
-                  {downloadStatus === 'error' && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-red-800">❌ Download fehlgeschlagen. Bitte versuchen Sie es erneut.</p>
-                    </div>
-                  )}
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Vielen Dank für Ihre Bestellung!
+                </h2>
+                
+                <p className="text-gray-600 mb-6">
+                  Ihr Untermietvertrag wurde erfolgreich erstellt und wird an{' '}
+                  <strong>{getCustomerEmail()}</strong> gesendet.
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="font-medium text-blue-900 mb-2">Was passiert als nächstes?</h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>✅ PDF wird automatisch an Ihre E-Mail gesendet</li>
+                    <li>✅ Vertrag ist rechtssicher und sofort verwendbar</li>
+                    <li>✅ Bei Fragen: support@palworks.de</li>
+                  </ul>
                 </div>
-              )}
-
-              {/* Payment Details */}
-              {paymentResult && (
-                <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-3">📋 Zahlungsdetails</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p><strong>Betrag:</strong> {totalPrice.toFixed(2)}€</p>
-                    <p><strong>E-Mail:</strong> {contractData.customer_email}</p>
-                    <p><strong>Dokumente:</strong> {1 + (selectedAddons?.length || 0)} PDF(s)</p>
-                  </div>
+                
+                <div className="flex gap-4 justify-center">
+                  <Link href="/" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Weitere Verträge erstellen
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setCurrentStep('form')
+                      setPaymentResult(null)
+                    }}
+                    className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200"
+                  >
+                    Neuen Vertrag erstellen
+                  </button>
                 </div>
-              )}
-
-              {/* Navigation */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  onClick={() => window.location.href = '/'}
-                  variant="outline"
-                  className="flex items-center"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Weiteren Vertrag erstellen
-                </Button>
-                <Button
-                  onClick={() => window.location.href = '/kontakt'}
-                  className="flex items-center"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Support kontaktieren
-                </Button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
