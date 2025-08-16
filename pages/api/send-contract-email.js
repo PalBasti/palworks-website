@@ -1,4 +1,4 @@
-// pages/api/send-contract-email.js - WORKING VERSION (basierend auf erfolgreichem Test)
+// pages/api/send-contract-email.js - FIXED VERSION mit Multiple PDFs
 
 async function createGmailTransporter() {
   try {
@@ -8,9 +8,8 @@ async function createGmailTransporter() {
       user: process.env.GMAIL_SMTP_USER
     });
 
-    // ✅ EXAKT DIESELBE METHODE WIE IM ERFOLGREICHEN TEST
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 587,
@@ -24,7 +23,6 @@ async function createGmailTransporter() {
       }
     });
 
-    // Verbindung testen
     await transporter.verify();
     console.log('✅ Gmail SMTP Verbindung erfolgreich!');
     
@@ -35,40 +33,109 @@ async function createGmailTransporter() {
   }
 }
 
-async function generatePDFForContract(contractType, formData, selectedAddons) {
+// 🔧 FIX: Neue Funktion für SEPARATE PDFs statt kombiniertes PDF
+async function generatePDFsForContract(contractType, formData, selectedAddons) {
   try {
-    console.log('🔄 Generiere ' + contractType + '-PDF...');
-    console.log('🔍 === PDF API ENTRY POINT ===');
+    console.log('🔄 Generiere separate PDFs für ' + contractType + '...');
+    console.log('🔍 === SEPARATE PDF API ENTRY POINT ===');
     console.log('🔍 Received selectedAddons:', selectedAddons);
     console.log('🔍 Addons type:', typeof selectedAddons, Array.isArray(selectedAddons));
     console.log('🔍 Return type: arraybuffer');
-    console.log('🔍 === CALLING PDF GENERATOR ===');
+    console.log('🔍 === CALLING SEPARATE PDF GENERATOR ===');
+
+    let generateSeparateDocuments;
 
     switch (contractType) {
       case 'untermietvertrag':
-        const { generateAndReturnPDF } = await import('../../lib/pdf/untermietvertragGenerator');
-        return await generateAndReturnPDF(formData, selectedAddons, 'arraybuffer');
+        const { generateSeparateDocuments: untermieteSeparate } = await import('../../lib/pdf/untermietvertragGenerator');
+        generateSeparateDocuments = untermieteSeparate;
+        break;
       
       case 'garagenvertrag':
-        const { generateAndReturnGaragePDF } = await import('../../lib/pdf/garagenvertragGenerator');
-        return await generateAndReturnGaragePDF(formData, selectedAddons, 'arraybuffer');
+        const { generateSeparateDocuments: garageSeparate } = await import('../../lib/pdf/garagenvertragGenerator');
+        generateSeparateDocuments = garageSeparate;
+        break;
       
       case 'wg-untermietvertrag':
-        const { generateAndReturnWGPDF } = await import('../../lib/pdf/wgUntermietvertragGenerator');
-        return await generateAndReturnWGPDF(formData, selectedAddons, 'arraybuffer');
+        const { generateSeparateDocuments: wgSeparate } = await import('../../lib/pdf/wgUntermietvertragGenerator');
+        generateSeparateDocuments = wgSeparate;
+        break;
       
       default:
         throw new Error(`Unbekannter Vertragstyp: ${contractType}`);
     }
+
+    if (!generateSeparateDocuments) {
+      console.warn('⚠️ generateSeparateDocuments nicht verfügbar, fallback zu einzelnem PDF');
+      // Fallback zur alten Methode falls separate Docs nicht verfügbar
+      return await generateSinglePDFAsArray(contractType, formData, selectedAddons);
+    }
+
+    // Separate Dokumente generieren
+    const documents = await generateSeparateDocuments(formData, selectedAddons || [], 'arraybuffer');
+    
+    console.log('✅ Separate PDFs generiert:', documents.map(d => d.filename));
+    
+    return documents;
+
   } catch (error) {
-    console.error('❌ PDF-Generierung fehlgeschlagen:', error);
+    console.error('❌ Separate PDF-Generierung fehlgeschlagen:', error);
+    console.warn('⚠️ Fallback zu einzelnem PDF...');
+    // Fallback zur alten Methode
+    return await generateSinglePDFAsArray(contractType, formData, selectedAddons);
+  }
+}
+
+// Fallback-Funktion für einzelnes PDF (kompatibel mit alter Version)
+async function generateSinglePDFAsArray(contractType, formData, selectedAddons) {
+  try {
+    console.log('🔄 Fallback: Generiere einzelnes PDF für ' + contractType + '...');
+
+    let generateFunction;
+    switch (contractType) {
+      case 'untermietvertrag':
+        const { generateAndReturnPDF } = await import('../../lib/pdf/untermietvertragGenerator');
+        generateFunction = generateAndReturnPDF;
+        break;
+      
+      case 'garagenvertrag':
+        const { generateAndReturnGaragePDF } = await import('../../lib/pdf/garagenvertragGenerator');
+        generateFunction = generateAndReturnGaragePDF;
+        break;
+      
+      case 'wg-untermietvertrag':
+        const { generateAndReturnWGPDF } = await import('../../lib/pdf/wgUntermietvertragGenerator');
+        generateFunction = generateAndReturnWGPDF;
+        break;
+      
+      default:
+        throw new Error(`Unbekannter Vertragstyp: ${contractType}`);
+    }
+
+    const pdfBuffer = await generateFunction(formData, selectedAddons, 'arraybuffer');
+    
+    const contractTypeNames = {
+      'untermietvertrag': 'Untermietvertrag',
+      'garagenvertrag': 'Garagenmietvertrag', 
+      'wg-untermietvertrag': 'WG-Untermietvertrag'
+    };
+
+    // Als Array formatieren für einheitliche Verarbeitung
+    return [{
+      type: 'contract',
+      name: contractTypeNames[contractType] || contractType,
+      filename: `${contractTypeNames[contractType] || contractType}_${new Date().toISOString().slice(0,10)}.pdf`,
+      data: pdfBuffer
+    }];
+
+  } catch (error) {
+    console.error('❌ Fallback PDF-Generierung fehlgeschlagen:', error);
     throw error;
   }
 }
 
-// FIX für send-contract-email.js - NUR diese Funktion ersetzen:
-
-async function sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer) {
+// 🔧 FIX: Neue Funktion für E-Mail mit MULTIPLE ATTACHMENTS
+async function sendEmailWithMultiplePDFs(transporter, email, contractType, formData, documents) {
   try {
     const contractTypeNames = {
       'untermietvertrag': 'Untermietvertrag',
@@ -77,20 +144,34 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
     };
 
     const typeName = contractTypeNames[contractType] || contractType;
-    const filename = `${typeName}_${new Date().toISOString().slice(0,10)}.pdf`;
-
-    // 🔧 FIX: ArrayBuffer zu Buffer konvertieren
-    const nodeBuffer = Buffer.from(pdfBuffer);
     
-    console.log('🔍 PDF Buffer Debug:', {
-      originalType: Object.prototype.toString.call(pdfBuffer),
-      originalSize: pdfBuffer.byteLength || pdfBuffer.length,
-      bufferType: Object.prototype.toString.call(nodeBuffer),
-      bufferSize: nodeBuffer.length,
-      isBuffer: Buffer.isBuffer(nodeBuffer)
+    console.log('🔍 E-Mail wird vorbereitet mit', documents.length, 'PDF-Anhängen');
+    console.log('🔍 Dokumente:', documents.map(d => d.filename));
+
+    // Alle PDFs zu Node.js Buffern konvertieren
+    const attachments = documents.map(doc => {
+      const nodeBuffer = Buffer.from(doc.data);
+      
+      console.log('🔍 PDF Buffer Debug für', doc.filename, ':', {
+        originalType: Object.prototype.toString.call(doc.data),
+        originalSize: doc.data.byteLength || doc.data.length,
+        bufferType: Object.prototype.toString.call(nodeBuffer),
+        bufferSize: nodeBuffer.length,
+        isBuffer: Buffer.isBuffer(nodeBuffer)
+      });
+
+      return {
+        filename: doc.filename,
+        content: nodeBuffer,
+        contentType: 'application/pdf'
+      };
     });
 
-    // E-Mail-Template mit professionellem Design
+    // Erweiterte E-Mail-Template mit Mehrfach-PDFs
+    const documentList = documents.map(doc => 
+      `<li>✅ ${doc.name} (${doc.filename})</li>`
+    ).join('');
+
     const htmlTemplate = `
     <!DOCTYPE html>
     <html>
@@ -104,6 +185,7 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
         .footer { background: #333; color: white; padding: 20px; text-align: center; font-size: 14px; }
         .success-icon { font-size: 48px; margin-bottom: 20px; }
         .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #4caf50; margin: 20px 0; }
+        .document-list { background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 15px 0; }
       </style>
     </head>
     <body>
@@ -116,12 +198,12 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
       <div class="content">
         <p>Liebe/r ${formData.tenant_name || formData.mieter_name || 'Kunde/Kundin'},</p>
         
-        <p>Ihr ${typeName} wurde erfolgreich generiert und ist als PDF-Anhang beigefügt.</p>
+        <p>Ihr ${typeName} wurde erfolgreich generiert und alle Dokumente sind als PDF-Anhänge beigefügt.</p>
         
         <div class="highlight">
           <strong>✅ Zahlung erfolgreich verarbeitet</strong><br>
-          <strong>✅ PDF automatisch generiert</strong><br>
-          <strong>✅ E-Mail-Kopie versendet</strong>
+          <strong>✅ ${documents.length} PDF${documents.length > 1 ? 's' : ''} automatisch generiert</strong><br>
+          <strong>✅ E-Mail-Kopie mit allen Dokumenten versendet</strong>
         </div>
 
         <div class="contract-details">
@@ -132,23 +214,24 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
           ${formData.start_date ? `<p><strong>Mietbeginn:</strong> ${new Date(formData.start_date).toLocaleDateString('de-DE')}</p>` : ''}
         </div>
 
-        <h3>📎 Im Anhang finden Sie:</h3>
-        <ul>
-          <li>✅ Ihren vollständigen, rechtssicheren ${typeName}</li>
-          <li>✅ Bereits ausgefüllt mit Ihren Daten</li>
-          <li>✅ Bereit zum Unterschreiben</li>
-        </ul>
+        <div class="document-list">
+          <h3>📎 Im Anhang finden Sie ${documents.length} Dokument${documents.length > 1 ? 'e' : ''}:</h3>
+          <ul>
+            ${documentList}
+          </ul>
+        </div>
 
         <h3>🔍 Nächste Schritte:</h3>
         <ol>
-          <li>PDF-Datei herunterladen und prüfen</li>
-          <li>Vertrag ausdrucken (2 Exemplare)</li>
+          <li>Alle PDF-Dateien herunterladen und prüfen</li>
+          <li>Hauptvertrag ausdrucken (2 Exemplare)</li>
           <li>Von beiden Parteien unterschreiben lassen</li>
           <li>Je ein Exemplar für Vermieter und Mieter</li>
+          ${documents.length > 1 ? '<li>Zusatzdokumente für Ihre Unterlagen verwenden</li>' : ''}
         </ol>
 
         <div class="highlight">
-          <strong>💡 Wichtiger Hinweis:</strong> Bewahren Sie diese E-Mail und das PDF sicher auf. 
+          <strong>💡 Wichtiger Hinweis:</strong> Bewahren Sie diese E-Mail und alle PDFs sicher auf. 
           Bei Fragen können Sie sich jederzeit an uns wenden.
         </div>
       </div>
@@ -168,31 +251,27 @@ async function sendEmailWithGmail(transporter, email, contractType, formData, pd
       },
       to: email,
       replyTo: process.env.GMAIL_REPLY_TO || 'support@palworks.de',
-      subject: `✅ Ihr ${typeName} von PalWorks - PDF im Anhang`,
+      subject: `✅ Ihr ${typeName} von PalWorks - ${documents.length} PDF${documents.length > 1 ? 's' : ''} im Anhang`,
       html: htmlTemplate,
-      attachments: [
-        {
-          filename: filename,
-          content: nodeBuffer, // 🔧 FIX: Verwende Buffer statt ArrayBuffer
-          contentType: 'application/pdf'
-        }
-      ]
+      attachments: attachments // 🔧 FIX: Jetzt multiple attachments!
     };
 
-    console.log('📧 Sende E-Mail...');
+    console.log('📧 Sende E-Mail mit', attachments.length, 'Anhängen...');
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ E-Mail erfolgreich gesendet:', result.messageId);
     
     return {
       success: true,
       messageId: result.messageId,
-      filename: filename
+      documentCount: documents.length,
+      documents: documents.map(d => ({ name: d.name, filename: d.filename }))
     };
   } catch (error) {
     console.error('❌ E-Mail-Versand fehlgeschlagen:', error);
     throw error;
   }
 }
+
 export default async function handler(req, res) {
   // CORS Headers für Debugging
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -216,6 +295,7 @@ export default async function handler(req, res) {
       contractType,
       hasFormData: !!formData,
       selectedAddons,
+      addonCount: selectedAddons.length,
       timestamp: new Date().toISOString()
     });
 
@@ -252,30 +332,35 @@ export default async function handler(req, res) {
     const transporter = await createGmailTransporter();
     console.log('✅ Transporter created successfully');
 
-    // PDF generieren
-    console.log('📄 Generating PDF...');
-    const pdfBuffer = await generatePDFForContract(contractType, formData, selectedAddons);
+    // 🔧 FIX: Separate PDFs generieren statt einzelnes PDF
+    console.log('📄 Generating separate PDFs...');
+    const documents = await generatePDFsForContract(contractType, formData, selectedAddons);
     
-    if (!pdfBuffer) {
-      throw new Error('PDF generation returned null/undefined');
+    if (!documents || documents.length === 0) {
+      throw new Error('PDF generation returned no documents');
     }
 
-    console.log('✅ PDF generiert:', {
-      size: `${Math.round(pdfBuffer.length / 1024)} KB`,
-      filename: `${contractType}_${new Date().toISOString().slice(0,10)}.pdf`
+    console.log('✅ PDFs generiert:', {
+      count: documents.length,
+      documents: documents.map(d => ({
+        name: d.name,
+        filename: d.filename,
+        size: `${Math.round((d.data.byteLength || d.data.length) / 1024)} KB`
+      }))
     });
 
-    // E-Mail mit PDF versenden
-    console.log('📧 Sending email...');
-    const emailResult = await sendEmailWithGmail(transporter, email, contractType, formData, pdfBuffer);
-    console.log('✅ Email sent successfully');
+    // 🔧 FIX: E-Mail mit mehreren PDFs versenden
+    console.log('📧 Sending email with multiple PDFs...');
+    const emailResult = await sendEmailWithMultiplePDFs(transporter, email, contractType, formData, documents);
+    console.log('✅ Email sent successfully with', emailResult.documentCount, 'attachments');
 
     // Erfolgreiche Antwort
     return res.status(200).json({
       success: true,
-      message: 'E-Mail erfolgreich versendet',
+      message: `E-Mail erfolgreich versendet mit ${emailResult.documentCount} PDF${emailResult.documentCount > 1 ? 's' : ''}`,
       messageId: emailResult.messageId,
-      filename: emailResult.filename,
+      documentCount: emailResult.documentCount,
+      documents: emailResult.documents,
       recipient: email,
       contractType: contractType,
       timestamp: new Date().toISOString()
