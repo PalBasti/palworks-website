@@ -214,15 +214,6 @@ export default function GaragenvertragForm({ onSubmit }) {
                 Alle wichtigen Klauseln sind bereits enthalten - Sie müssen nur noch Ihre Daten eingeben.
               </p>
             </div>
-                {formData.garage_type === 'garage' ? 'Garagenmietvertrag' : 'Stellplatzmietvertrag'} erstellen
-                <span className="ml-3 text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                  DIY
-                </span>
-              </h1>
-              <p className="text-gray-600">
-                Rechtssicherer DIY-{formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}mietvertrag
-              </p>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
               
