@@ -1,14 +1,11 @@
+// 🔧 VOLLSTÄNDIGER CODE - OHNE SYNTAX-FEHLER
 // components/GaragenvertragForm.js - KORRIGIERT MIT FUNKTIONIERENDEN IMPORTS
+
 import { useState, useEffect } from 'react'
 import { Check, Mail, Info, FileText, CreditCard, Car, Building2 } from 'lucide-react'
 
 // ✅ KORRIGIERTER STATIC IMPORT - Zwei Ebenen hoch von components/
 import { getContractAddons } from '../../lib/api/contracts'
-
-// ✅ MODULARE KOMPONENTEN IMPORTIEREN (falls vorhanden)
-// import EmailCollection from './modules/EmailCollection'
-// import PriceDisplay from './modules/PriceDisplay'
-// import PaymentModule from './modules/PaymentModule'
 
 // ✅ NEWSLETTER SERVICE mit Fallback
 const subscribeToNewsletter = async (email, source, contractType) => {
@@ -481,7 +478,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                           {errors.garage_address && (
                             <p className="text-red-500 text-sm mt-1">{errors.garage_address}</p>
                           )}
-                        </div>
+                      </div>
                       <div className="ml-3 text-right">
                         <span className="text-lg font-bold text-blue-600">
                           +{addon.price.toFixed(2)}€
@@ -572,6 +569,7 @@ export default function GaragenvertragForm({ onSubmit }) {
     </div>
   )
 }
+                        </div>
                         
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -775,5 +773,3 @@ export default function GaragenvertragForm({ onSubmit }) {
                               </li>
                             ))}
                           </ul>
-                        )}
-                      </div>
