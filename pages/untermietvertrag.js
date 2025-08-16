@@ -1,8 +1,8 @@
-// pages/untermietvertrag.js - KORRIGIERTE VERSION MIT E-MAIL-MAPPING
+// pages/untermietvertrag.js - VOLLSTÄNDIG MIT ALLEN KOMPONENTEN
 import { useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { FileText, ArrowLeft, CheckCircle, Download, Mail } from 'lucide-react'
+import { FileText, ArrowLeft, CheckCircle, Download, Mail, AlertCircle, Edit } from 'lucide-react'
 import UntermietvertragForm from '../components/UntermietvertragForm'
 import PaymentModule from '../components/modules/PaymentModule'
 import PricingSection from '../components/shared/PricingSection'
@@ -67,6 +67,26 @@ export default function UntermietvertragPage() {
            contractData.customerEmail || 
            contractData.billing_email || 
            'Keine E-Mail-Adresse verfügbar'
+  }
+
+  // Addon-Namen für Anzeige in Order Summary
+  const getAddonDisplayName = (addonKey) => {
+    const addonNames = {
+      'explanation': 'Vertragserläuterungen',
+      'handover_protocol': 'Übergabeprotokoll',
+      'legal_review': 'Anwaltliche Prüfung'
+    }
+    return addonNames[addonKey] || addonKey
+  }
+
+  // Addon-Preise für Order Summary
+  const getAddonPrice = (addonKey) => {
+    const addonPrices = {
+      'explanation': 9.90,
+      'handover_protocol': 7.90,
+      'legal_review': 29.90
+    }
+    return addonPrices[addonKey] || 0
   }
 
   return (
@@ -151,6 +171,22 @@ export default function UntermietvertragPage() {
                   onAddonChange={handleAddonChange}
                   totalPrice={totalPrice}
                 />
+                
+                {/* Info-Box für separate Downloads */}
+                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-900 mb-1">
+                        📄 Separate PDF-Downloads
+                      </p>
+                      <p className="text-amber-800">
+                        Jede Zusatzleistung wird als separates PDF-Dokument per E-Mail versendet. 
+                        Alle Dokumente enthalten Ihre Vertragsdaten.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -166,8 +202,9 @@ export default function UntermietvertragPage() {
                     </h2>
                     <button
                       onClick={handleBackToForm}
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
                     >
+                      <Edit className="h-4 w-4 mr-1" />
                       Bearbeiten
                     </button>
                   </div>
@@ -191,6 +228,10 @@ export default function UntermietvertragPage() {
                   <div className="border rounded-lg p-4 mb-6">
                     <h3 className="font-medium text-gray-900 mb-3">Vertragsinformationen</h3>
                     <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Vertragstyp:</span>
+                        <span className="text-gray-900">Untermietvertrag</span>
+                      </div>
                       {contractData.property_address && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Objekt:</span>
@@ -211,8 +252,29 @@ export default function UntermietvertragPage() {
                           </span>
                         </div>
                       )}
+                      {contractData.billing_email && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">E-Mail:</span>
+                          <span className="text-gray-900">{contractData.billing_email}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Addon Summary */}
+                  {getSelectedAddons().length > 0 && (
+                    <div className="border rounded-lg p-4 mb-6">
+                      <h3 className="font-medium text-gray-900 mb-3">Gewählte Zusatzleistungen</h3>
+                      <div className="space-y-2 text-sm">
+                        {getSelectedAddons().map(addon => (
+                          <div key={addon} className="flex justify-between">
+                            <span className="text-gray-600">{getAddonDisplayName(addon)}</span>
+                            <span className="text-gray-900">{getAddonPrice(addon).toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Payment Module mit korrigierter contractData Übergabe */}
                   <PaymentModule
@@ -241,9 +303,9 @@ export default function UntermietvertragPage() {
                     
                     {getSelectedAddons().map(addon => (
                       <div key={addon} className="flex justify-between text-sm">
-                        <span className="text-gray-600">+ {addon}</span>
+                        <span className="text-gray-600">+ {getAddonDisplayName(addon)}</span>
                         <span className="text-gray-900">
-                          {addon === 'explanation' ? '9,90 €' : '7,90 €'}
+                          {getAddonPrice(addon).toFixed(2)} €
                         </span>
                       </div>
                     ))}
@@ -253,6 +315,26 @@ export default function UntermietvertragPage() {
                         <span className="text-gray-900">Gesamtsumme</span>
                         <span className="text-blue-600">{totalPrice.toFixed(2)} €</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Hinweis zu separaten Downloads */}
+                  <div className="mt-6 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="text-sm">
+                      <p className="font-medium text-green-900 mb-1">
+                        ✅ Was Sie erhalten:
+                      </p>
+                      <ul className="text-green-800 space-y-1">
+                        <li>• Untermietvertrag (PDF)</li>
+                        {getSelectedAddons().includes('explanation') && (
+                          <li>• Vertragserläuterungen (separates PDF)</li>
+                        )}
+                        {getSelectedAddons().includes('handover_protocol') && (
+                          <li>• Übergabeprotokoll (separates PDF)</li>
+                        )}
+                        <li>• E-Mail-Versand inklusive</li>
+                        <li>• Sofortiger Download</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -281,8 +363,32 @@ export default function UntermietvertragPage() {
                   <ul className="text-sm text-blue-800 space-y-1">
                     <li>✅ PDF wird automatisch an Ihre E-Mail gesendet</li>
                     <li>✅ Vertrag ist rechtssicher und sofort verwendbar</li>
+                    {getSelectedAddons().length > 0 && (
+                      <li>✅ Zusatzleistungen als separate PDFs inklusive</li>
+                    )}
                     <li>✅ Bei Fragen: support@palworks.de</li>
                   </ul>
+                </div>
+
+                {/* Bestellübersicht auf Success-Seite */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                  <h3 className="font-medium text-gray-900 mb-2">Ihre Bestellung:</h3>
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span>Untermietvertrag</span>
+                      <span>12,90 €</span>
+                    </div>
+                    {getSelectedAddons().map(addon => (
+                      <div key={addon} className="flex justify-between">
+                        <span>{getAddonDisplayName(addon)}</span>
+                        <span>{getAddonPrice(addon).toFixed(2)} €</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-2 flex justify-between font-semibold">
+                      <span>Gesamt</span>
+                      <span>{totalPrice.toFixed(2)} €</span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex gap-4 justify-center">
@@ -299,6 +405,23 @@ export default function UntermietvertragPage() {
                     Neuen Vertrag erstellen
                   </button>
                 </div>
+
+                {/* Debug Info in Development */}
+                {process.env.NODE_ENV === 'development' && paymentResult && (
+                  <details className="mt-6 text-left">
+                    <summary className="text-sm text-gray-500 cursor-pointer">Debug Info</summary>
+                    <pre className="text-xs bg-gray-100 p-2 rounded mt-2 overflow-auto">
+                      {JSON.stringify({ 
+                        paymentResult, 
+                        contractData: {
+                          customer_email: contractData.customer_email,
+                          billing_email: contractData.billing_email,
+                          selectedAddons
+                        }
+                      }, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </div>
             </div>
           )}
