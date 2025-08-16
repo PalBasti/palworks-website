@@ -9,7 +9,7 @@ async function createGmailTransporter() {
     });
 
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 587,
