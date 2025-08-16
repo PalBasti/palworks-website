@@ -1,4 +1,4 @@
-// pages/api/send-contract-email.js - FIXED VERSION mit Multiple PDFs
+// pages/api/send-contract-email.js - COMPLETE FIXED VERSION mit Multiple PDFs
 
 async function createGmailTransporter() {
   try {
@@ -9,7 +9,7 @@ async function createGmailTransporter() {
     });
 
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 587,
@@ -36,7 +36,7 @@ async function createGmailTransporter() {
 // 🔧 FIX: Neue Funktion für SEPARATE PDFs statt kombiniertes PDF
 async function generatePDFsForContract(contractType, formData, selectedAddons) {
   try {
-    console.log('🔄 Generiere separate PDFs für ' + contractType + '...');
+    console.log('📄 Generiere separate PDFs für ' + contractType + '...');
     console.log('🔍 === SEPARATE PDF API ENTRY POINT ===');
     console.log('🔍 Received selectedAddons:', selectedAddons);
     console.log('🔍 Addons type:', typeof selectedAddons, Array.isArray(selectedAddons));
@@ -89,7 +89,7 @@ async function generatePDFsForContract(contractType, formData, selectedAddons) {
 // Fallback-Funktion für einzelnes PDF (kompatibel mit alter Version)
 async function generateSinglePDFAsArray(contractType, formData, selectedAddons) {
   try {
-    console.log('🔄 Fallback: Generiere einzelnes PDF für ' + contractType + '...');
+    console.log('📄 Fallback: Generiere einzelnes PDF für ' + contractType + '...');
 
     let generateFunction;
     switch (contractType) {
@@ -209,9 +209,12 @@ async function sendEmailWithMultiplePDFs(transporter, email, contractType, formD
         <div class="contract-details">
           <h3>📋 Vertragsdetails</h3>
           <p><strong>Vertragstyp:</strong> ${typeName}</p>
-          ${formData.property_address ? `<p><strong>Objekt:</strong> ${formData.property_address}</p>` : ''}
-          ${formData.rent_amount ? `<p><strong>Miete:</strong> ${formData.rent_amount} €</p>` : ''}
-          ${formData.start_date ? `<p><strong>Mietbeginn:</strong> ${new Date(formData.start_date).toLocaleDateString('de-DE')}</p>` : ''}
+          ${formData.property_address || formData.garage_address ? 
+            `<p><strong>Objekt:</strong> ${formData.property_address || formData.garage_address}</p>` : ''}
+          ${formData.rent_amount || formData.garage_rent ? 
+            `<p><strong>Miete:</strong> ${formData.rent_amount || formData.garage_rent} €</p>` : ''}
+          ${formData.start_date ? 
+            `<p><strong>Mietbeginn:</strong> ${new Date(formData.start_date).toLocaleDateString('de-DE')}</p>` : ''}
         </div>
 
         <div class="document-list">
@@ -221,7 +224,7 @@ async function sendEmailWithMultiplePDFs(transporter, email, contractType, formD
           </ul>
         </div>
 
-        <h3>🔍 Nächste Schritte:</h3>
+        <h3>📝 Nächste Schritte:</h3>
         <ol>
           <li>Alle PDF-Dateien herunterladen und prüfen</li>
           <li>Hauptvertrag ausdrucken (2 Exemplare)</li>
