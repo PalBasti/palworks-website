@@ -1,79 +1,10 @@
-// components/GaragenvertragForm.js - ÜBERARBEITET MIT E-MAIL + ADDONS
+// components/GaragenvertragForm.js - KORRIGIERT: E-Mail zuerst, Addons funktional
 import { useState, useEffect } from 'react'
-import { Check, Mail, Info, FileText, CreditCard } from 'lucide-react'
-
-// ✅ MODULARE KOMPONENTEN IMPORTIEREN
-import EmailCollection from './modules/EmailCollection'
-import PriceDisplay from './modules/PriceDisplay'
-import PaymentModule from './modules/PaymentModule'
-
-// ✅ API SERVICES mit Fallbacks
-const subscribeToNewsletter = async (email, source, contractType) => {
-  try {
-    const { subscribeToNewsletter: realService } = await import('../lib/supabase/newsletterService')
-    return await realService(email, source, contractType)
-  } catch (error) {
-    console.log('Newsletter service fallback:', { email, source, contractType })
-    return { success: true }
-  }
-}
-
-const getContractAddons = async (contractType) => {
-  try {
-    const { getContractAddons: realService } = await import('../lib/api/contracts')
-    const data = await realService(contractType)
-    
-    // ✅ DUPLIKAT-FILTER
-    const uniqueAddons = data.filter((addon, index, array) => {
-      return array.findIndex(a => a.name === addon.name) === index
-    })
-    
-    console.log('🔍 Garage addons loaded:', uniqueAddons.length)
-    return uniqueAddons
-    
-  } catch (error) {
-    console.log('Addons service fallback for garage contract')
-    // ✅ GARAGE-SPEZIFISCHE FALLBACK-ADDONS
-    return [
-      {
-        id: 'explanations',
-        addon_key: 'explanations',
-        name: 'Rechtliche Erläuterungen',
-        price: 9.90,
-        description: 'Detaillierte Erklärungen zu allen Vertragsklauseln',
-        features: [
-          'Verständliche Rechtstexte',
-          'Praktische Beispiele',
-          'Vermieter- und Mieterrechte',
-          'Kündigung und Fristen'
-        ]
-      },
-      {
-        id: 'handover_protocol',
-        addon_key: 'handover_protocol', 
-        name: 'Übergabeprotokoll für Garage',
-        price: 7.90,
-        description: 'Spezielles Protokoll für Garagenübergabe',
-        features: [
-          'Zustandsdokumentation',
-          'Schlüsselübergabe',
-          'Ausstattung erfassen',
-          'Mängel dokumentieren'
-        ]
-      }
-    ]
-  }
-}
+import { Check, Mail, Info, FileText, CreditCard, User, Building } from 'lucide-react'
 
 export default function GaragenvertragForm({ onSubmit }) {
-  // ✅ BEWÄHRTE STATE-STRUKTUR beibehalten
+  // ✅ STATE MANAGEMENT
   const [formData, setFormData] = useState({
-    // Parteien
-    landlord_name: '',
-    landlord_address: '',
-    tenant_name: '',
-    tenant_address: '',
-    
     // Garage-spezifische Felder
     garage_type: 'garage', // 'garage' oder 'stellplatz'
     garage_number: '',
@@ -92,30 +23,67 @@ export default function GaragenvertragForm({ onSubmit }) {
     has_deposit: false,
     deposit: '',
     garage_keys: '1',
+    
+    // Optional: Parteien (werden nur bei Bedarf ausgefüllt)
+    landlord_name: '',
+    landlord_address: '',
+    tenant_name: '',
+    tenant_address: '',
+    
+    // Bankdaten
     iban: '',
     bank: ''
   })
 
-  // ✅ NEUE E-MAIL & ADDON-STATES
+  // ✅ E-MAIL & ADDON-STATES
   const [customerEmail, setCustomerEmail] = useState('')
   const [newsletterSignup, setNewsletterSignup] = useState(false)
   const [selectedAddons, setSelectedAddons] = useState([])
-  const [addons, setAddons] = useState([])
   const [errors, setErrors] = useState({})
+  const [showOptionalFields, setShowOptionalFields] = useState(false)
 
-  // ✅ ADDONS LADEN beim Mount
-  useEffect(() => {
-    const loadAddons = async () => {
-      try {
-        const contractAddons = await getContractAddons('garagenvertrag')
-        setAddons(contractAddons)
-        console.log('🔍 Garage addons loaded:', contractAddons)
-      } catch (error) {
-        console.error('Failed to load garage addons:', error)
-      }
+  // ✅ FALLBACK ADDONS (damit sofort etwas angezeigt wird)
+  const fallbackAddons = [
+    {
+      id: 'explanations',
+      addon_key: 'explanations',
+      name: 'Rechtliche Erläuterungen',
+      price: 9.90,
+      description: 'Detaillierte Erklärungen zu allen Vertragsklauseln',
+      features: [
+        'Verständliche Rechtstexte',
+        'Praktische Beispiele',
+        'Vermieter- und Mieterrechte',
+        'Kündigung und Fristen'
+      ]
+    },
+    {
+      id: 'handover_protocol',
+      addon_key: 'handover_protocol', 
+      name: 'Übergabeprotokoll für Garage',
+      price: 7.90,
+      description: 'Spezielles Protokoll für Garagenübergabe',
+      features: [
+        'Zustandsdokumentation',
+        'Schlüsselübergabe',
+        'Ausstattung erfassen',
+        'Mängel dokumentieren'
+      ]
+    },
+    {
+      id: 'legal_review',
+      addon_key: 'legal_review', 
+      name: 'Anwaltliche Prüfung',
+      price: 29.90,
+      description: 'Professionelle juristische Überprüfung',
+      features: [
+        'Anwaltliche Durchsicht',
+        'Rechtssicherheit',
+        'Individuelle Anpassungen',
+        '48h Bearbeitungszeit'
+      ]
     }
-    loadAddons()
-  }, [])
+  ]
 
   // ✅ FORM HANDLERS
   const handleInputChange = (e) => {
@@ -146,15 +114,13 @@ export default function GaragenvertragForm({ onSubmit }) {
   const validateForm = () => {
     const newErrors = {}
     
-    // E-Mail ist Pflicht für neue Version
-    if (!customerEmail) {
-      newErrors.customer_email = 'E-Mail-Adresse ist für die Vertragszustellung erforderlich'
+    // E-Mail ist Pflicht
+    if (!customerEmail || !customerEmail.includes('@')) {
+      newErrors.customer_email = 'Gültige E-Mail-Adresse für Vertragszustellung erforderlich'
     }
     
-    const requiredFields = [
-      'landlord_name', 'landlord_address', 'tenant_name', 'tenant_address',
-      'start_date', 'rent'
-    ]
+    // Basis-Pflichtfelder
+    const requiredFields = ['start_date', 'rent']
     
     // Garage-Adresse nur prüfen wenn nicht gleiche Adresse
     if (!formData.garage_same_address) {
@@ -179,15 +145,18 @@ export default function GaragenvertragForm({ onSubmit }) {
     return Object.keys(newErrors).length === 0
   }
 
-  // ✅ SUBMIT HANDLER mit erweiterten Daten
+  // ✅ SUBMIT HANDLER
   const handleSubmit = (e) => {
     e.preventDefault()
     if (validateForm()) {
       const extendedData = {
         ...formData,
-        selected_addons: selectedAddons,
+        // E-Mail für Integration
         customer_email: customerEmail,
+        billing_email: customerEmail, // Kompatibilität
         newsletter_signup: newsletterSignup,
+        // Addons
+        selected_addons: selectedAddons,
         // Rückwärtskompatibilität
         include_explanations: selectedAddons.includes('explanations'),
         include_protocol: selectedAddons.includes('handover_protocol')
@@ -198,13 +167,13 @@ export default function GaragenvertragForm({ onSubmit }) {
   }
 
   // ✅ PREISFUNKTIONEN
-  const getBasePrice = () => 7.90 // Garage-Basispreis
+  const getBasePrice = () => 7.90
   
   const getTotalPrice = () => {
     let total = getBasePrice()
     
     selectedAddons.forEach(addonId => {
-      const addon = addons.find(a => a.id === addonId || a.addon_key === addonId)
+      const addon = fallbackAddons.find(a => a.id === addonId || a.addon_key === addonId)
       if (addon) {
         total += addon.price
       }
@@ -234,28 +203,179 @@ export default function GaragenvertragForm({ onSubmit }) {
 
             <form onSubmit={handleSubmit} className="space-y-8">
               
-              {/* ✅ E-MAIL-SEKTION */}
+              {/* ✅ 1. E-MAIL-SEKTION - ZUERST */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Preis-Übersicht</h3>
+            
+            {/* Basispreis */}
+            <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
+              <span className="text-gray-700">
+                {formData.garage_type === 'garage' ? 'Garagenmietvertrag' : 'Stellplatzmietvertrag'}
+              </span>
+              <span className="font-medium">{getBasePrice().toFixed(2)}€</span>
+            </div>
+
+            {/* ✅ ADDONS-SEKTION - FUNKTIONAL */}
+            <div className="mb-6">
+              <h4 className="text-md font-medium text-gray-900 mb-3">📋 Zusätzliche Services</h4>
+              
+              <div className="space-y-3">
+                {fallbackAddons.map((addon) => (
+                  <div key={addon.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <label className="flex items-center cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)}
+                          onChange={() => handleAddonToggle(addon.id)}
+                          className="mr-3 h-4 w-4 text-blue-600 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-gray-900">{addon.name}</div>
+                          <div className="text-xs text-gray-600 mt-1">{addon.description}</div>
+                        </div>
+                      </label>
+                      <span className="text-sm font-medium text-blue-600 ml-2">+{addon.price.toFixed(2)}€</span>
+                    </div>
+                    
+                    {(selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)) && addon.features && (
+                      <div className="mt-2 pl-7">
+                        <div className="text-xs text-gray-600">
+                          {addon.features.slice(0, 2).map((feature, index) => (
+                            <div key={index} className="flex items-center mb-1">
+                              <Check className="h-3 w-3 text-green-500 mr-1 flex-shrink-0" />
+                              {feature}
+                            </div>
+                          ))}
+                          {addon.features.length > 2 && (
+                            <div className="text-xs text-gray-500 italic">
+                              +{addon.features.length - 2} weitere Features
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gesamtpreis */}
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-700">Zwischensumme:</span>
+                <span className="font-medium">{getTotalPrice()}€</span>
+              </div>
+              <div className="flex justify-between items-center text-lg font-bold text-blue-600">
+                <span>Gesamtpreis:</span>
+                <span>{getTotalPrice()}€</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                inkl. 19% MwSt., sofortiger PDF-Download + E-Mail-Versand
+              </div>
+            </div>
+
+            {/* Service-Features */}
+            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <h4 className="text-sm font-medium text-green-800 mb-2">✅ Inklusive Services</h4>
+              <div className="text-xs text-green-700 space-y-1">
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Sofortiger PDF-Download
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Automatischer E-Mail-Versand
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Rechtssichere Klauseln
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Professionelle Gestaltung
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Sofortige Verfügbarkeit
+                </div>
+              </div>
+            </div>
+
+            {/* Hinweis */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-start">
+                <Info className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-700">
+                  <div className="font-medium mb-1">💡 Automatische Zustellung</div>
+                  Nach der Zahlung erhalten Sie Ihren {formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}mietvertrag 
+                  sofort als PDF zum Download und per E-Mail an <strong>{customerEmail || '[E-Mail eingeben]'}</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* E-Mail-Status */}
+            {customerEmail && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                <div className="flex items-center text-sm text-green-700">
+                  <Check className="h-4 w-4 mr-2" />
+                  📧 <strong>Bereit für Versand an:</strong><br/>
+                  {customerEmail}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}900 mb-3 flex items-center">
                   <Mail className="h-5 w-5 text-blue-600 mr-2" />
-                  Kontaktdaten für Vertragszustellung
-                  <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Verpflichtend</span>
+                  📧 Rechnungsempfänger & Vertragszustellung
+                  <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Erforderlich</span>
                 </h3>
                 
-                <EmailCollection
-                  email={customerEmail}
-                  onEmailChange={setCustomerEmail}
-                  newsletterSignup={newsletterSignup}
-                  onNewsletterChange={setNewsletterSignup}
-                  error={errors.customer_email}
-                />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      E-Mail-Adresse für Rechnung und Vertragszustellung <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.customer_email ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="ihre@email.de"
+                      required
+                    />
+                    {errors.customer_email && <p className="text-red-500 text-sm mt-1">{errors.customer_email}</p>}
+                    <p className="text-sm text-gray-600 mt-2">
+                      📱 Sie erhalten Rechnung und fertigen Vertrag automatisch per E-Mail
+                    </p>
+                  </div>
+
+                  <div className="flex items-start">
+                    <input
+                      type="checkbox"
+                      id="newsletter"
+                      checked={newsletterSignup}
+                      onChange={(e) => setNewsletterSignup(e.target.checked)}
+                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                    />
+                    <label htmlFor="newsletter" className="ml-3 text-sm text-gray-700">
+                      📬 <strong>Newsletter abonnieren (optional)</strong><br/>
+                      Erhalten Sie Updates zu neuen Vertragsvorlagen, Rechtstipps und besonderen Angeboten. 
+                      Abmeldung jederzeit möglich.
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              {/* ✅ OBJEKTART-AUSWAHL */}
+              {/* ✅ 2. OBJEKTART-AUSWAHL */}
               <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Art des Mietobjekts</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">🚗 Art des Mietobjekts</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center">
+                  <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors">
                     <input
                       type="radio"
                       name="garage_type"
@@ -265,11 +385,11 @@ export default function GaragenvertragForm({ onSubmit }) {
                       className="mr-3"
                     />
                     <div>
-                      <div className="font-medium">🚗 Garage</div>
-                      <div className="text-sm text-gray-600">Geschlossener Stellplatz</div>
+                      <div className="font-medium text-lg">🏠 Garage</div>
+                      <div className="text-sm text-gray-600">Geschlossener Stellplatz mit Tor</div>
                     </div>
                   </label>
-                  <label className="flex items-center">
+                  <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors">
                     <input
                       type="radio"
                       name="garage_type"
@@ -279,100 +399,24 @@ export default function GaragenvertragForm({ onSubmit }) {
                       className="mr-3"
                     />
                     <div>
-                      <div className="font-medium">🅿️ Stellplatz</div>
+                      <div className="font-medium text-lg">🅿️ Stellplatz</div>
                       <div className="text-sm text-gray-600">Offener Parkplatz</div>
                     </div>
                   </label>
                 </div>
               </div>
 
-              {/* ✅ PARTEIEN */}
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Vermieter */}
-                <div className="bg-blue-50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">👤 Vermieter</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="landlord_name"
-                        value={formData.landlord_name}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.landlord_name ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="Max Mustermann"
-                      />
-                      {errors.landlord_name && <p className="text-red-500 text-sm mt-1">{errors.landlord_name}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Adresse <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="landlord_address"
-                        value={formData.landlord_address}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.landlord_address ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="Musterstraße 1, 12345 Berlin"
-                      />
-                      {errors.landlord_address && <p className="text-red-500 text-sm mt-1">{errors.landlord_address}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mieter */}
-                <div className="bg-green-50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">👥 Mieter</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="tenant_name"
-                        value={formData.tenant_name}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.tenant_name ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="Anna Beispiel"
-                      />
-                      {errors.tenant_name && <p className="text-red-500 text-sm mt-1">{errors.tenant_name}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Adresse <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="tenant_address"
-                        value={formData.tenant_address}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.tenant_address ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="Beispielweg 2, 54321 München"
-                      />
-                      {errors.tenant_address && <p className="text-red-500 text-sm mt-1">{errors.tenant_address}</p>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ✅ MIETOBJEKT */}
+              {/* ✅ 3. MIETOBJEKT-DETAILS */}
               <div className="bg-yellow-50 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  🚗 {formData.garage_type === 'garage' ? 'Garage' : 'Stellplatz'}
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                  <Building className="h-5 w-5 text-yellow-600 mr-2" />
+                  🏠 {formData.garage_type === 'garage' ? 'Garage' : 'Stellplatz'}-Details
                 </h3>
                 
                 <div className="grid md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}-Nummer
+                      {formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}-Nummer (optional)
                     </label>
                     <input
                       type="text"
@@ -409,13 +453,13 @@ export default function GaragenvertragForm({ onSubmit }) {
                       className="mr-3"
                     />
                     <span className="text-sm text-gray-700">
-                      {formData.garage_type === 'garage' ? 'Garage' : 'Stellplatz'} befindet sich an gleicher Adresse wie Vermieter
+                      📍 {formData.garage_type === 'garage' ? 'Garage' : 'Stellplatz'} befindet sich an gleicher Adresse wie Vermieter
                     </span>
                   </label>
                 </div>
 
                 {!formData.garage_same_address && (
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid md:grid-cols-3 gap-4 p-4 bg-white rounded border">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Adresse <span className="text-red-500">*</span>
@@ -466,7 +510,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                 )}
               </div>
 
-              {/* ✅ VERTRAGSDATEN */}
+              {/* ✅ 4. VERTRAGSDATEN */}
               <div className="bg-gray-50 rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">📋 Vertragsdaten</h3>
                 
@@ -483,7 +527,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                           onChange={handleInputChange}
                           className="mr-3"
                         />
-                        Unbefristet
+                        ♾️ Unbefristet (Standard)
                       </label>
                       <label className="flex items-center">
                         <input
@@ -494,7 +538,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                           onChange={handleInputChange}
                           className="mr-3"
                         />
-                        Befristet
+                        📅 Befristet
                       </label>
                     </div>
                   </div>
@@ -533,7 +577,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                 </div>
               </div>
 
-              {/* ✅ FINANZIELLE DATEN */}
+              {/* ✅ 5. FINANZIELLE DATEN */}
               <div className="bg-green-50 rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Miete und Kosten</h3>
                 
@@ -553,6 +597,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                       placeholder="50.00"
                     />
                     {errors.rent && <p className="text-red-500 text-sm mt-1">{errors.rent}</p>}
+                    <p className="text-xs text-gray-600 mt-1">Ohne Betriebskosten</p>
                   </div>
 
                   <div className="space-y-4">
@@ -564,7 +609,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                         onChange={handleInputChange}
                         className="mr-3"
                       />
-                      <span className="text-sm text-gray-700">Betriebskosten separat</span>
+                      <span className="text-sm text-gray-700">📊 Zusätzliche Betriebskosten</span>
                     </label>
 
                     {formData.has_utilities && (
@@ -582,6 +627,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           placeholder="15.00"
                         />
+                        <p className="text-xs text-gray-600 mt-1">Strom, Reinigung, etc.</p>
                       </div>
                     )}
 
@@ -593,7 +639,7 @@ export default function GaragenvertragForm({ onSubmit }) {
                         onChange={handleInputChange}
                         className="mr-3"
                       />
-                      <span className="text-sm text-gray-700">Kaution erforderlich</span>
+                      <span className="text-sm text-gray-700">🔒 Kaution erforderlich</span>
                     </label>
 
                     {formData.has_deposit && (
@@ -615,45 +661,101 @@ export default function GaragenvertragForm({ onSubmit }) {
                     )}
                   </div>
                 </div>
+              </div>
 
-                {/* Bankdaten */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Bankverbindung für Mietzahlungen</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">IBAN</label>
-                      <input
-                        type="text"
-                        name="iban"
-                        value={formData.iban}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="DE89 3704 0044 0532 0130 00"
-                      />
+              {/* ✅ 6. OPTIONALE PARTEIEN-DATEN */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <User className="h-5 w-5 text-blue-600 mr-2" />
+                    👥 Vermieter- & Mieterangaben (optional)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowOptionalFields(!showOptionalFields)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    {showOptionalFields ? 'Ausblenden' : 'Eingeben'}
+                  </button>
+                </div>
+                
+                {!showOptionalFields ? (
+                  <p className="text-sm text-gray-600">
+                    💡 Diese Angaben können auch später im PDF eingetragen werden. 
+                    Klicken Sie auf "Eingeben" falls Sie die Namen bereits kennen.
+                  </p>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Vermieter */}
+                    <div className="bg-white rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">👤 Vermieter</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                          <input
+                            type="text"
+                            name="landlord_name"
+                            value={formData.landlord_name}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            placeholder="Max Mustermann"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                          <input
+                            type="text"
+                            name="landlord_address"
+                            value={formData.landlord_address}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            placeholder="Musterstraße 1, 12345 Berlin"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
-                      <input
-                        type="text"
-                        name="bank"
-                        value={formData.bank}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="Sparkasse Berlin"
-                      />
+
+                    {/* Mieter */}
+                    <div className="bg-white rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">👥 Mieter</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                          <input
+                            type="text"
+                            name="tenant_name"
+                            value={formData.tenant_name}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            placeholder="Anna Beispiel"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                          <input
+                            type="text"
+                            name="tenant_address"
+                            value={formData.tenant_address}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            placeholder="Beispielweg 2, 54321 München"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* ✅ SUBMIT BUTTON */}
               <div className="flex justify-center pt-6">
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-lg transition-colors flex items-center"
+                  disabled={!customerEmail}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-4 px-8 rounded-lg transition-colors flex items-center text-lg"
                 >
                   <FileText className="h-5 w-5 mr-2" />
-                  Vertrag erstellen und zur Zahlung
+                  Vertrag erstellen für {getTotalPrice()}€
                 </button>
               </div>
             </form>
@@ -663,117 +765,4 @@ export default function GaragenvertragForm({ onSubmit }) {
         {/* ✅ SIDEBAR (1 Spalte) - Preisanzeige */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow-lg p-6 sticky top-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Preis-Übersicht</h3>
-            
-            {/* Basispreis */}
-            <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
-              <span className="text-gray-700">
-                {formData.garage_type === 'garage' ? 'Garagenmietvertrag' : 'Stellplatzmietvertrag'}
-              </span>
-              <span className="font-medium">{getBasePrice().toFixed(2)}€</span>
-            </div>
-
-            {/* ✅ ADDONS-SEKTION */}
-            <div className="mb-6">
-              <h4 className="text-md font-medium text-gray-900 mb-3">📋 Zusätzliche Services</h4>
-              
-              {addons.length > 0 ? (
-                <div className="space-y-3">
-                  {addons.map((addon) => (
-                    <div key={addon.id} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)}
-                            onChange={() => handleAddonToggle(addon.id)}
-                            className="mr-3 h-4 w-4 text-blue-600 rounded"
-                          />
-                          <div>
-                            <div className="font-medium text-sm text-gray-900">{addon.name}</div>
-                            <div className="text-xs text-gray-600">{addon.description}</div>
-                          </div>
-                        </label>
-                        <span className="text-sm font-medium text-blue-600">+{addon.price.toFixed(2)}€</span>
-                      </div>
-                      
-                      {(selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)) && addon.features && (
-                        <div className="mt-2 pl-7">
-                          <div className="text-xs text-gray-600">
-                            {addon.features.slice(0, 2).map((feature, index) => (
-                              <div key={index} className="flex items-center">
-                                <Check className="h-3 w-3 text-green-500 mr-1 flex-shrink-0" />
-                                {feature}
-                              </div>
-                            ))}
-                            {addon.features.length > 2 && (
-                              <div className="text-xs text-gray-500 italic">
-                                +{addon.features.length - 2} weitere Features
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500 italic">Addons werden geladen...</div>
-              )}
-            </div>
-
-            {/* Gesamtpreis */}
-            <div className="border-t border-gray-200 pt-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-700">Zwischensumme:</span>
-                <span className="font-medium">{getTotalPrice()}€</span>
-              </div>
-              <div className="flex justify-between items-center text-lg font-bold text-blue-600">
-                <span>Gesamtpreis:</span>
-                <span>{getTotalPrice()}€</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-2">
-                inkl. 19% MwSt., sofortiger PDF-Download + E-Mail-Versand
-              </div>
-            </div>
-
-            {/* Service-Features */}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg">
-              <h4 className="text-sm font-medium text-green-800 mb-2">✅ Inklusive Services</h4>
-              <div className="text-xs text-green-700 space-y-1">
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Sofortiger PDF-Download
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Automatischer E-Mail-Versand
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Rechtssichere Klauseln
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Professionelle Gestaltung
-                </div>
-              </div>
-            </div>
-
-            {/* Hinweis */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-start">
-                <Info className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-blue-700">
-                  <div className="font-medium mb-1">💡 Hinweis</div>
-                  Nach der Zahlung erhalten Sie Ihren {formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}mietvertrag 
-                  sofort als PDF zum Download und per E-Mail zugesendet.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+            <h3 className="text-lg font-medium text-gray-
