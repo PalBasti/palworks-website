@@ -1,4 +1,4 @@
-// components/GaragenvertragForm.js - KORRIGIERT: E-Mail zuerst, Addons funktional
+// components/GaragenvertragForm.js - KORRIGIERT: Syntax-Fehler behoben
 import { useState, useEffect } from 'react'
 import { Check, Mail, Info, FileText, CreditCard, User, Building } from 'lucide-react'
 
@@ -205,131 +205,7 @@ export default function GaragenvertragForm({ onSubmit }) {
               
               {/* ✅ 1. E-MAIL-SEKTION - ZUERST */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Preis-Übersicht</h3>
-            
-            {/* Basispreis */}
-            <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
-              <span className="text-gray-700">
-                {formData.garage_type === 'garage' ? 'Garagenmietvertrag' : 'Stellplatzmietvertrag'}
-              </span>
-              <span className="font-medium">{getBasePrice().toFixed(2)}€</span>
-            </div>
-
-            {/* ✅ ADDONS-SEKTION - FUNKTIONAL */}
-            <div className="mb-6">
-              <h4 className="text-md font-medium text-gray-900 mb-3">📋 Zusätzliche Services</h4>
-              
-              <div className="space-y-3">
-                {fallbackAddons.map((addon) => (
-                  <div key={addon.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <label className="flex items-center cursor-pointer flex-1">
-                        <input
-                          type="checkbox"
-                          checked={selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)}
-                          onChange={() => handleAddonToggle(addon.id)}
-                          className="mr-3 h-4 w-4 text-blue-600 rounded"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-sm text-gray-900">{addon.name}</div>
-                          <div className="text-xs text-gray-600 mt-1">{addon.description}</div>
-                        </div>
-                      </label>
-                      <span className="text-sm font-medium text-blue-600 ml-2">+{addon.price.toFixed(2)}€</span>
-                    </div>
-                    
-                    {(selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)) && addon.features && (
-                      <div className="mt-2 pl-7">
-                        <div className="text-xs text-gray-600">
-                          {addon.features.slice(0, 2).map((feature, index) => (
-                            <div key={index} className="flex items-center mb-1">
-                              <Check className="h-3 w-3 text-green-500 mr-1 flex-shrink-0" />
-                              {feature}
-                            </div>
-                          ))}
-                          {addon.features.length > 2 && (
-                            <div className="text-xs text-gray-500 italic">
-                              +{addon.features.length - 2} weitere Features
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Gesamtpreis */}
-            <div className="border-t border-gray-200 pt-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-700">Zwischensumme:</span>
-                <span className="font-medium">{getTotalPrice()}€</span>
-              </div>
-              <div className="flex justify-between items-center text-lg font-bold text-blue-600">
-                <span>Gesamtpreis:</span>
-                <span>{getTotalPrice()}€</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-2">
-                inkl. 19% MwSt., sofortiger PDF-Download + E-Mail-Versand
-              </div>
-            </div>
-
-            {/* Service-Features */}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg">
-              <h4 className="text-sm font-medium text-green-800 mb-2">✅ Inklusive Services</h4>
-              <div className="text-xs text-green-700 space-y-1">
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Sofortiger PDF-Download
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Automatischer E-Mail-Versand
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Rechtssichere Klauseln
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Professionelle Gestaltung
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-3 w-3 mr-1" />
-                  Sofortige Verfügbarkeit
-                </div>
-              </div>
-            </div>
-
-            {/* Hinweis */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-start">
-                <Info className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-blue-700">
-                  <div className="font-medium mb-1">💡 Automatische Zustellung</div>
-                  Nach der Zahlung erhalten Sie Ihren {formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}mietvertrag 
-                  sofort als PDF zum Download und per E-Mail an <strong>{customerEmail || '[E-Mail eingeben]'}</strong>.
-                </div>
-              </div>
-            </div>
-
-            {/* E-Mail-Status */}
-            {customerEmail && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                <div className="flex items-center text-sm text-green-700">
-                  <Check className="h-4 w-4 mr-2" />
-                  📧 <strong>Bereit für Versand an:</strong><br/>
-                  {customerEmail}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}900 mb-3 flex items-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
                   <Mail className="h-5 w-5 text-blue-600 mr-2" />
                   📧 Rechnungsempfänger & Vertragszustellung
                   <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">Erforderlich</span>
@@ -765,4 +641,128 @@ export default function GaragenvertragForm({ onSubmit }) {
         {/* ✅ SIDEBAR (1 Spalte) - Preisanzeige */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow-lg p-6 sticky top-6">
-            <h3 className="text-lg font-medium text-gray-
+            <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Preis-Übersicht</h3>
+            
+            {/* Basispreis */}
+            <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
+              <span className="text-gray-700">
+                {formData.garage_type === 'garage' ? 'Garagenmietvertrag' : 'Stellplatzmietvertrag'}
+              </span>
+              <span className="font-medium">{getBasePrice().toFixed(2)}€</span>
+            </div>
+
+            {/* ✅ ADDONS-SEKTION - FUNKTIONAL */}
+            <div className="mb-6">
+              <h4 className="text-md font-medium text-gray-900 mb-3">📋 Zusätzliche Services</h4>
+              
+              <div className="space-y-3">
+                {fallbackAddons.map((addon) => (
+                  <div key={addon.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <label className="flex items-center cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)}
+                          onChange={() => handleAddonToggle(addon.id)}
+                          className="mr-3 h-4 w-4 text-blue-600 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-gray-900">{addon.name}</div>
+                          <div className="text-xs text-gray-600 mt-1">{addon.description}</div>
+                        </div>
+                      </label>
+                      <span className="text-sm font-medium text-blue-600 ml-2">+{addon.price.toFixed(2)}€</span>
+                    </div>
+                    
+                    {(selectedAddons.includes(addon.id) || selectedAddons.includes(addon.addon_key)) && addon.features && (
+                      <div className="mt-2 pl-7">
+                        <div className="text-xs text-gray-600">
+                          {addon.features.slice(0, 2).map((feature, index) => (
+                            <div key={index} className="flex items-center mb-1">
+                              <Check className="h-3 w-3 text-green-500 mr-1 flex-shrink-0" />
+                              {feature}
+                            </div>
+                          ))}
+                          {addon.features.length > 2 && (
+                            <div className="text-xs text-gray-500 italic">
+                              +{addon.features.length - 2} weitere Features
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gesamtpreis */}
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-700">Zwischensumme:</span>
+                <span className="font-medium">{getTotalPrice()}€</span>
+              </div>
+              <div className="flex justify-between items-center text-lg font-bold text-blue-600">
+                <span>Gesamtpreis:</span>
+                <span>{getTotalPrice()}€</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                inkl. 19% MwSt., sofortiger PDF-Download + E-Mail-Versand
+              </div>
+            </div>
+
+            {/* Service-Features */}
+            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <h4 className="text-sm font-medium text-green-800 mb-2">✅ Inklusive Services</h4>
+              <div className="text-xs text-green-700 space-y-1">
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Sofortiger PDF-Download
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Automatischer E-Mail-Versand
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Rechtssichere Klauseln
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Professionelle Gestaltung
+                </div>
+                <div className="flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Sofortige Verfügbarkeit
+                </div>
+              </div>
+            </div>
+
+            {/* Hinweis */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-start">
+                <Info className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-700">
+                  <div className="font-medium mb-1">💡 Automatische Zustellung</div>
+                  Nach der Zahlung erhalten Sie Ihren {formData.garage_type === 'garage' ? 'Garagen' : 'Stellplatz'}mietvertrag 
+                  sofort als PDF zum Download und per E-Mail an <strong>{customerEmail || '[E-Mail eingeben]'}</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* E-Mail-Status */}
+            {customerEmail && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                <div className="flex items-center text-sm text-green-700">
+                  <Check className="h-4 w-4 mr-2" />
+                  📧 <strong>Bereit für Versand an:</strong><br/>
+                  {customerEmail}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
