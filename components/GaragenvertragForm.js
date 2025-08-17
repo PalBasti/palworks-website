@@ -1,4 +1,4 @@
-// components/GaragenvertragForm.js - VOLLSTÄNDIGE KORRIGIERTE VERSION (nur Encoding-Fix)
+// components/GaragenvertragForm.js - VOLLSTÄNDIGE KORRIGIERTE VERSION
 import { useState, useEffect } from 'react'
 import { Check, Mail, Info, FileText, CreditCard, ArrowLeft } from 'lucide-react'
 
@@ -39,27 +39,27 @@ const getContractAddons = async (contractType) => {
       {
         id: 'explanations',
         addon_key: 'explanations',
-        name: 'Rechtliche Erläuterungen', // ✅ KORRIGIERT: war "ErlÃ¤uterungen"
+        name: 'Rechtliche Erläuterungen',
         price: 9.90,
-        description: 'Detaillierte Erklärungen zu allen Vertragsklauseln', // ✅ KORRIGIERT
+        description: 'Detaillierte Erklärungen zu allen Vertragsklauseln',
         features: [
-          'Verständliche Rechtstexte', // ✅ KORRIGIERT: war "VerstÃ¤ndliche"
+          'Verständliche Rechtstexte',
           'Praktische Beispiele',
           'Vermieter- und Mieterrechte',
-          'Kündigung und Fristen' // ✅ KORRIGIERT: war "KÃ¼ndigung"
+          'Kündigung und Fristen'
         ]
       },
       {
         id: 'handover_protocol',
         addon_key: 'handover_protocol', 
-        name: 'Übergabeprotokoll für Garage', // ✅ KORRIGIERT: war "Ãœbergabeprotokoll fÃ¼r"
+        name: 'Übergabeprotokoll für Garage',
         price: 7.90,
-        description: 'Spezielles Protokoll für Garagenübergabe', // ✅ KORRIGIERT
+        description: 'Spezielles Protokoll für Garagenübergabe',
         features: [
           'Zustandsdokumentation',
-          'Schlüsselübergabe', // ✅ KORRIGIERT: war "SchlÃ¼sselÃ¼bergabe"
+          'Schlüsselübergabe',
           'Ausstattung erfassen',
-          'Mängel dokumentieren' // ✅ KORRIGIERT: war "MÃ¤ngel"
+          'Mängel dokumentieren'
         ]
       }
     ]
@@ -568,6 +568,37 @@ export default function GaragenvertragForm({ onSubmit }) {
                       />
                       <span className="absolute right-3 top-2 text-gray-500">€</span>
                     </div>
+                    {errors.rent && <p className="text-red-500 text-sm mt-1">{errors.rent}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Kaution (optional)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="deposit_amount"
+                        value={formData.deposit_amount}
+                        onChange={handleInputChange}
+                        step="0.01"
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="100.00"
+                      />
+                      <span className="absolute right-3 top-2 text-gray-500">€</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nebenkosten (optional)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="additional_costs"
+                        value={formData.additional_costs}
+                        onChange={handleInputChange}
+                        step="0.01"
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="10.00"
+                      />
+                      <span className="absolute right-3 top-2 text-gray-500">€</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -697,35 +728,4 @@ export default function GaragenvertragForm({ onSubmit }) {
       </div>
     </div>
   )
-} text-gray-500">€</span>
-                    </div>
-                    {errors.rent && <p className="text-red-500 text-sm mt-1">{errors.rent}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Kaution (optional)</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="deposit_amount"
-                        value={formData.deposit_amount}
-                        onChange={handleInputChange}
-                        step="0.01"
-                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="100.00"
-                      />
-                      <span className="absolute right-3 top-2 text-gray-500">€</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nebenkosten (optional)</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="additional_costs"
-                        value={formData.additional_costs}
-                        onChange={handleInputChange}
-                        step="0.01"
-                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="10.00"
-                      />
-                      <span className="absolute right-3 top-2
+}
