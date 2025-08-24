@@ -1,5 +1,6 @@
 // pages/api/stripe/webhook.js
 import Stripe from 'stripe';
+import { buffer } from 'micro'
 import { updateContractPaymentStatus } from '../../../lib/supabase/contractService';
 import { updatePaymentStatus } from '../../../lib/supabase/paymentService';
 
@@ -13,9 +14,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 // WICHTIG: Raw Body für Webhook-Verification
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
+    bodyParser: false,
   },
 }
 
@@ -32,7 +31,7 @@ export default async function handler(req, res) {
 
   try {
     // Raw Body als Buffer lesen (für Stripe Signature Verification)
-    const buf = Buffer.from(JSON.stringify(req.body));
+    const buf = await buffer(req)
     const signature = req.headers['stripe-signature'];
 
     if (!signature) {
@@ -46,8 +45,6 @@ export default async function handler(req, res) {
     }
 
     console.log('🔐 Verifying webhook signature...');
-    
-    // Event von Stripe verifizieren
     event = stripe.webhooks.constructEvent(buf, signature, webhookSecret);
     console.log('✅ Webhook signature verified - Event:', event.type, 'ID:', event.id);
 
@@ -157,12 +154,6 @@ async function handlePaymentSucceeded(paymentIntent) {
     }
 
     console.log('🎉 Payment processing completed successfully for contract:', contractId);
-
-    // TODO: Hier könnten weitere Aktionen getriggert werden:
-    // - E-Mail versenden
-    // - PDF generieren
-    // await sendContractEmail(contractId);
-    // await generateContractPDF(contractId);
 
   } catch (error) {
     console.error('❌ Error in handlePaymentSucceeded:', error.message, error.stack);

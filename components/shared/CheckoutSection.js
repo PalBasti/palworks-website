@@ -1,6 +1,19 @@
 // components/shared/CheckoutSection.js - PRODUCTION READY_1
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, Lock, Check, AlertCircle, Info, ShoppingCart, Download, Mail, FileText } from 'lucide-react';
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
+
+const cardElementOptions = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#424770',
+      '::placeholder': {
+        color: '#aab7c4',
+      },
+    },
+  },
+}
 
 const CheckoutSection = ({
   formData = {},
@@ -12,10 +25,24 @@ const CheckoutSection = ({
   loading = false,
   error = null,
   compact = false,
-  showTitle = true
+  showTitle = true,
+  customerEmail: customerEmailProp,
+  onPaymentSuccess
 }) => {
   const [paymentMethod, setPaymentMethod] = useState('stripe');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const stripe = useStripe()
+  const elements = useElements()
+  const [paymentState, setPaymentState] = useState('idle') // idle, processing, succeeded, failed
+  const [paymentError, setPaymentError] = useState(null)
+
+  useEffect(() => {
+    console.log('🔎 Stripe readiness:', {
+      hasStripe: !!stripe,
+      hasElements: !!elements,
+      publishableKeyPresent: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    })
+  }, [stripe, elements])
 
   // ✅ KONSISTENTE Addon-Details mit anderen Modulen
   const addonDetails = {
@@ -39,26 +66,81 @@ const CheckoutSection = ({
     'wg': 'WG-Untermietvertrag'
   };
 
-  const handleCheckout = async () => {
-    if (!acceptedTerms) {
-      alert('Bitte akzeptieren Sie die AGB und Datenschutzbestimmungen.');
-      return;
-    }
+  const isFormValid = (formData.customer_email || customerEmailProp) && acceptedTerms && !loading;
+  const customerEmail = customerEmailProp || formData.customer_email || formData.billing_email || formData.customerEmail
+
+  const handlePayment = async () => {
+    if (!stripe || !elements) return
+    if (!acceptedTerms) return
+
+    setPaymentState('processing')
+    setPaymentError(null)
 
     try {
-      await onSubmit({
-        ...formData,
-        selected_addons: selectedAddons,
-        total_amount: totalPrice,
-        payment_method: paymentMethod,
-        accepted_terms: acceptedTerms
-      });
-    } catch (err) {
-      console.error('Checkout failed:', err);
-    }
-  };
+      // 1) Contract erstellen (Draft)
+      const contractResponse = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contract_type: contractType,
+          form_data: formData,
+          selected_addons: selectedAddons,
+          total_amount: totalPrice,
+          customer_email: customerEmail
+        })
+      })
 
-  const isFormValid = formData.customer_email && acceptedTerms && !loading;
+      if (!contractResponse.ok) {
+        const errData = await contractResponse.json().catch(() => ({}))
+        throw new Error(errData.message || 'Vertragserstellung fehlgeschlagen')
+      }
+      const { contract } = await contractResponse.json()
+
+      // 2) Payment Intent erstellen
+      const paymentResponse = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contract_id: contract.id
+        })
+      })
+
+      if (!paymentResponse.ok) {
+        const errData = await paymentResponse.json().catch(() => ({}))
+        throw new Error(errData.message || 'Payment Intent Erstellung fehlgeschlagen')
+      }
+
+      const paymentData = await paymentResponse.json()
+      const clientSecret = paymentData?.payment_intent?.client_secret || paymentData?.client_secret
+      if (!clientSecret) throw new Error('Client Secret fehlt')
+
+      // 3) Payment bestätigen
+      const card = elements.getElement(CardElement)
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card,
+          billing_details: { email: customerEmail }
+        }
+      })
+
+      if (stripeError) {
+        setPaymentError(stripeError.message)
+        setPaymentState('failed')
+        return
+      }
+
+      if (paymentIntent?.status === 'succeeded') {
+        setPaymentState('succeeded')
+        onPaymentSuccess && onPaymentSuccess(contract.id, paymentIntent.id)
+      } else {
+        setPaymentState('failed')
+        setPaymentError('Zahlung nicht erfolgreich abgeschlossen')
+      }
+    } catch (e) {
+      setPaymentError(e.message)
+      setPaymentState('failed')
+    }
+  }
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border ${compact ? 'p-4' : 'p-6'}`}>
@@ -145,7 +227,8 @@ const CheckoutSection = ({
                 <CreditCard className="h-5 w-5 text-gray-400 mr-2" />
                 <span className="text-sm font-medium">Kreditkarte / Debitkarte</span>
               </div>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-2">
+                <span className={`text-xs ${stripe ? 'text-green-600' : 'text-gray-500'}`}>{stripe ? 'Stripe bereit' : 'Warte auf Stripe'}</span>
                 <span className="text-xs text-gray-500">Visa</span>
                 <span className="text-xs text-gray-500">•</span>
                 <span className="text-xs text-gray-500">Mastercard</span>
@@ -155,6 +238,18 @@ const CheckoutSection = ({
             </div>
           </label>
         </div>
+
+        {/* Card Element direkt unter Zahlungsart anzeigen */}
+        {paymentMethod === 'stripe' && (
+          <div className="mt-3">
+            <div className="border rounded p-3 bg-gray-50">
+              <CardElement options={cardElementOptions} />
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              Test-Kreditkarte: 4242 4242 4242 4242 | Beliebiges Datum & CVC
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sicherheitshinweis */}
@@ -168,38 +263,6 @@ const CheckoutSection = ({
         <p className="text-xs text-green-700 mt-1">
           SSL-verschlüsselt • PCI-DSS konform • Keine Kartendaten gespeichert
         </p>
-      </div>
-
-      {/* Was Sie erhalten */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="font-medium text-blue-900 mb-3 flex items-center">
-          <Download className="h-4 w-4 mr-2" />
-          Das erhalten Sie:
-        </h4>
-        <ul className="text-sm text-blue-800 space-y-2">
-          <li className="flex items-center">
-            <Check className="h-4 w-4 mr-2 text-blue-600" />
-            Sofortiger PDF-Download nach Zahlung
-          </li>
-          <li className="flex items-center">
-            <Mail className="h-4 w-4 mr-2 text-blue-600" />
-            E-Mail mit Vertrag und Rechnung
-          </li>
-          <li className="flex items-center">
-            <FileText className="h-4 w-4 mr-2 text-blue-600" />
-            Rechtssichere Vertragsvorlage
-          </li>
-          {selectedAddonList.length > 0 && (
-            <li className="flex items-center">
-              <Check className="h-4 w-4 mr-2 text-blue-600" />
-              {selectedAddonList.length} professionelle{selectedAddonList.length > 1 ? '' : 's'} Zusatzdokument{selectedAddonList.length > 1 ? 'e' : ''}
-            </li>
-          )}
-          <li className="flex items-center">
-            <Check className="h-4 w-4 mr-2 text-blue-600" />
-            Unbegrenzte Nutzung und Anpassung
-          </li>
-        </ul>
       </div>
 
       {/* AGB Checkbox */}
@@ -238,49 +301,37 @@ const CheckoutSection = ({
       </div>
 
       {/* Error Display */}
-      {error && (
+      {(error || paymentError) && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center">
             <AlertCircle className="h-4 w-4 text-red-600 mr-2" />
-            <span className="text-sm text-red-800">{error}</span>
+            <span className="text-sm text-red-800">{paymentError || error}</span>
           </div>
         </div>
       )}
 
-      {/* Validation Errors */}
-      {!formData.customer_email && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-center">
-            <Info className="h-4 w-4 text-amber-600 mr-2" />
-            <span className="text-sm text-amber-800">
-              Bitte geben Sie Ihre E-Mail-Adresse ein
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Checkout Button */}
+      {/* Submit Button */}
       <button
-        onClick={handleCheckout}
-        disabled={!isFormValid}
+        onClick={handlePayment}
+        disabled={!isFormValid || !stripe || paymentState === 'processing'}
         className={`
           w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 
           flex items-center justify-center space-x-2
-          ${!isFormValid
+          ${(!isFormValid || !stripe || paymentState === 'processing')
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl'
           }
         `}
       >
-        {loading ? (
+        {paymentState === 'processing' ? (
           <>
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span>Verarbeite Zahlung...</span>
+            <span>Zahlung wird verarbeitet...</span>
           </>
         ) : (
           <>
             <Lock className="h-5 w-5" />
-            <span>Jetzt sicher kaufen - {totalPrice.toFixed(2)} €</span>
+            <span>Jetzt kaufen - {totalPrice.toFixed(2)} €</span>
           </>
         )}
       </button>
