@@ -77,6 +77,7 @@ const CheckoutSection = ({
     setPaymentError(null)
 
     try {
+      console.log('📝 Creating contract...')
       // 1) Contract erstellen (Draft)
       const contractResponse = await fetch('/api/contracts', {
         method: 'POST',
@@ -92,10 +93,13 @@ const CheckoutSection = ({
 
       if (!contractResponse.ok) {
         const errData = await contractResponse.json().catch(() => ({}))
+        console.error('❌ Contract creation failed:', errData)
         throw new Error(errData.message || 'Vertragserstellung fehlgeschlagen')
       }
       const { contract } = await contractResponse.json()
+      console.log('✅ Contract created:', contract?.id)
 
+      console.log('💳 Creating payment intent for contract:', contract?.id)
       // 2) Payment Intent erstellen
       const paymentResponse = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
@@ -107,13 +111,16 @@ const CheckoutSection = ({
 
       if (!paymentResponse.ok) {
         const errData = await paymentResponse.json().catch(() => ({}))
+        console.error('❌ Payment intent creation failed:', errData)
         throw new Error(errData.message || 'Payment Intent Erstellung fehlgeschlagen')
       }
 
       const paymentData = await paymentResponse.json()
+      console.log('✅ Payment intent response:', paymentData)
       const clientSecret = paymentData?.payment_intent?.client_secret || paymentData?.client_secret
       if (!clientSecret) throw new Error('Client Secret fehlt')
 
+      console.log('✔️ Confirming card payment with client secret...')
       // 3) Payment bestätigen
       const card = elements.getElement(CardElement)
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
@@ -124,19 +131,23 @@ const CheckoutSection = ({
       })
 
       if (stripeError) {
+        console.error('❌ Stripe confirmation error:', stripeError)
         setPaymentError(stripeError.message)
         setPaymentState('failed')
         return
       }
 
       if (paymentIntent?.status === 'succeeded') {
+        console.log('🎉 Payment succeeded:', paymentIntent.id)
         setPaymentState('succeeded')
         onPaymentSuccess && onPaymentSuccess(contract.id, paymentIntent.id)
       } else {
+        console.warn('⚠️ Payment did not succeed:', paymentIntent?.status)
         setPaymentState('failed')
         setPaymentError('Zahlung nicht erfolgreich abgeschlossen')
       }
     } catch (e) {
+      console.error('❌ Payment flow error:', e)
       setPaymentError(e.message)
       setPaymentState('failed')
     }
