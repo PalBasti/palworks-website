@@ -6,7 +6,7 @@ import { Download, FileText, CheckCircle, Info, ArrowLeft } from 'lucide-react'
 
 // ✅ IMPORTS
 import GaragenvertragForm from '../components/GaragenvertragForm'
-import PaymentModule from '../components/modules/PaymentModule'
+import CheckoutSection from '../components/shared/CheckoutSection'
 
 export default function GarageVertragPage() {
   // ✅ STATE MANAGEMENT (3 Schritte)
@@ -273,13 +273,12 @@ export default function GarageVertragPage() {
                   Schließen Sie Ihren Kauf ab und erhalten Sie sofort Ihren rechtssicheren Vertrag.
                 </p>
 
-                <PaymentModule
-                  contractData={contractData}
-                  totalAmount={parseFloat(calculateTotalPrice())}
+                <CheckoutSection
                   contractType="garagenvertrag"
+                  formData={contractData}
                   selectedAddons={contractData.selected_addons || []}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
+                  totalPrice={parseFloat(calculateTotalPrice())}
+                  onPaymentSuccess={(contractId, paymentIntentId) => handlePaymentSuccess({ contractId, paymentIntentId })}
                 />
               </div>
             </div>

@@ -4,7 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { FileText, ArrowLeft, CheckCircle, Download, Mail, AlertCircle, Edit } from 'lucide-react'
 import UntermietvertragForm from '../components/UntermietvertragForm'
-import PaymentModule from '../components/modules/PaymentModule'
+import CheckoutSection from '../components/shared/CheckoutSection'
 import PricingSection from '../components/shared/PricingSection'
 import { useContractForm } from '../hooks/useContractForm'
 
@@ -276,14 +276,13 @@ export default function UntermietvertragPage() {
                     </div>
                   )}
 
-                  {/* Payment Module mit korrigierter contractData Übergabe */}
-                  <PaymentModule
+                  {/* Checkout Section mit Stripe CardElement */}
+                  <CheckoutSection
                     contractType="untermietvertrag"
-                    contractData={contractData} // ✅ KORRIGIERT: Übergebe die originale contractData
+                    formData={contractData}
                     selectedAddons={getSelectedAddons()}
-                    totalAmount={totalPrice}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
+                    totalPrice={totalPrice}
+                    onPaymentSuccess={(contractId, paymentIntentId) => handlePaymentSuccess({ contractId, paymentIntentId })}
                   />
                 </div>
               </div>
