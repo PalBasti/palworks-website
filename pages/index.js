@@ -1,8 +1,13 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { FileText, Users, Shield, Zap, CheckCircle, ArrowRight } from 'lucide-react'
+import Header from '../components/shared/Header'
+import { FileText, Users, Shield, Zap, CheckCircle, ArrowRight, Crown, Building } from 'lucide-react'
+import { useAuth } from '../lib/contexts/AuthContext'
+import { USER_ROLES } from '../lib/supabase'
 
 export default function Home() {
+  const { isAuthenticated, hasRole } = useAuth()
+
   return (
     <>
       <Head>
@@ -12,23 +17,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">PalWorks</h1>
-            </div>
-            <nav className="hidden md:flex space-x-8">
-              <a href="#vertraege" className="text-gray-700 hover:text-blue-600">Verträge</a>
-              <a href="#preise" className="text-gray-700 hover:text-blue-600">Preise</a>
-              <a href="#ueber-uns" className="text-gray-700 hover:text-blue-600">Über uns</a>
-              <a href="#kontakt" className="text-gray-700 hover:text-blue-600">Kontakt</a>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main>
         {/* Hero Section */}
@@ -236,44 +225,238 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Preise */}
+        {/* Multi-Tier Pricing */}
         <section id="preise" className="py-20 bg-gray-50">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Transparente Preise</h2>
-              <p className="text-lg text-gray-600">Keine versteckten Kosten, keine Abos</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Wählen Sie Ihren Plan</h2>
+              <p className="text-lg text-gray-600">Von Public bis Enterprise - für jede Anforderung der richtige Plan</p>
             </div>
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <div className="grid md:grid-cols-3 gap-8">
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* Public Tier */}
+              <div className="bg-white rounded-lg shadow-lg p-8 relative">
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold mb-2">DIY-Verträge</h3>
-                  <div className="text-3xl font-bold text-blue-600 mb-4">ab 7,90 €</div>
-                  <ul className="text-sm text-gray-600 space-y-2">
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Sofortiger PDF-Download</li>
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Rechtssicher & aktuell</li>
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Ausfüllhilfe inklusive</li>
+                  <h3 className="text-xl font-semibold mb-2">Public</h3>
+                  <div className="text-4xl font-bold text-gray-900 mb-1">Kostenlos</div>
+                  <p className="text-gray-500 mb-6">Pay-per-use</p>
+                  
+                  <ul className="text-left space-y-3 mb-8">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>3 Standard Vertragstypen</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>PDF-Download sofort</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>E-Mail Support</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Rechtssicher & aktuell</span>
+                    </li>
                   </ul>
+
+                  <div className="text-sm text-gray-600 mb-6">
+                    <p>Preise pro Vertrag:</p>
+                    <p>• Untermietvertrag: €19,99</p>
+                    <p>• Garagenvertrag: €14,99</p>
+                    <p>• WG-Vertrag: €17,99</p>
+                  </div>
+
+                  <button className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors">
+                    Kostenlos starten
+                  </button>
                 </div>
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold mb-2">Premium-Service</h3>
-                  <div className="text-3xl font-bold text-blue-600 mb-4">auf Anfrage</div>
-                  <ul className="text-sm text-gray-600 space-y-2">
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Individuelle Anpassungen</li>
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Telefonische Beratung</li>
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Rechtliche Prüfung</li>
-                  </ul>
+              </div>
+
+              {/* Founder Tier */}
+              <div className="bg-white rounded-lg shadow-xl p-8 relative border-2 border-yellow-400">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-semibold">
+                    Beliebt
+                  </span>
                 </div>
+                
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold mb-2">Maßgeschneidert</h3>
-                  <div className="text-3xl font-bold text-blue-600 mb-4">Stundensatz</div>
-                  <ul className="text-sm text-gray-600 space-y-2">
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Komplette Neuerstellung</li>
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Persönliche Beratung</li>
-                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Langfristige Betreuung</li>
+                  <div className="flex items-center justify-center mb-2">
+                    <Crown className="h-6 w-6 text-yellow-500 mr-2" />
+                    <h3 className="text-xl font-semibold">Founder</h3>
+                  </div>
+                  <div className="text-4xl font-bold text-yellow-600 mb-1">€29,99</div>
+                  <p className="text-gray-500 mb-6">pro Monat</p>
+                  
+                  <ul className="text-left space-y-3 mb-8">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Alle Public Features</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span className="font-semibold text-yellow-600">25% Rabatt auf alle Verträge</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Erweiterte Template Bibliothek</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Priority Support (&lt;4h)</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Gewerbemietvertrag (Exklusiv)</span>
+                    </li>
                   </ul>
+
+                  <div className="text-sm text-gray-600 mb-6">
+                    <p>Vergünstigte Preise:</p>
+                    <p>• Untermietvertrag: €14,99</p>
+                    <p>• Garagenvertrag: €9,99</p>
+                    <p>• WG-Vertrag: €12,99</p>
+                  </div>
+
+                  {!isAuthenticated ? (
+                    <button 
+                      onClick={() => window.location.href = '/?auth=signup'}
+                      className="w-full bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Founder werden
+                    </button>
+                  ) : hasRole(USER_ROLES.FOUNDER) ? (
+                    <button 
+                      onClick={() => window.location.href = '/founder/dashboard'}
+                      className="w-full bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Zum Dashboard
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => window.location.href = '/upgrade?plan=founder'}
+                      className="w-full bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Jetzt upgraden
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Enterprise Tier */}
+              <div className="bg-white rounded-lg shadow-lg p-8 relative">
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <Building className="h-6 w-6 text-purple-600 mr-2" />
+                    <h3 className="text-xl font-semibold">Enterprise</h3>
+                  </div>
+                  <div className="text-4xl font-bold text-purple-600 mb-1">€99,99</div>
+                  <p className="text-gray-500 mb-6">pro Monat</p>
+                  
+                  <ul className="text-left space-y-3 mb-8">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Alle Founder Features</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span className="font-semibold text-purple-600">Custom Templates erstellen</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Multi-User Company Accounts</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Persönliche Rechtsberatung</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>White-Label Branding</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                      <span>Usage Analytics Dashboard</span>
+                    </li>
+                  </ul>
+
+                  {!isAuthenticated ? (
+                    <button 
+                      onClick={() => window.location.href = '/?auth=signup'}
+                      className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Kontakt aufnehmen
+                    </button>
+                  ) : hasRole(USER_ROLES.ENTERPRISE) ? (
+                    <button 
+                      onClick={() => window.location.href = '/enterprise/dashboard'}
+                      className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Zum Dashboard
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => window.location.href = '/upgrade?plan=enterprise'}
+                      className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Enterprise werden
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Feature Comparison */}
+            {isAuthenticated && (
+              <div className="mt-16 bg-white rounded-lg shadow-lg p-8">
+                <h3 className="text-2xl font-bold text-center mb-8">Feature Vergleich</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3">Feature</th>
+                        <th className="text-center py-3">Public</th>
+                        <th className="text-center py-3">Founder</th>
+                        <th className="text-center py-3">Enterprise</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr>
+                        <td className="py-3">Standard Verträge</td>
+                        <td className="text-center py-3"><CheckCircle className="h-5 w-5 text-green-500 mx-auto" /></td>
+                        <td className="text-center py-3"><CheckCircle className="h-5 w-5 text-green-500 mx-auto" /></td>
+                        <td className="text-center py-3"><CheckCircle className="h-5 w-5 text-green-500 mx-auto" /></td>
+                      </tr>
+                      <tr>
+                        <td className="py-3">Rabatt auf Verträge</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3">25%</td>
+                        <td className="text-center py-3">25%</td>
+                      </tr>
+                      <tr>
+                        <td className="py-3">Custom Templates</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3"><CheckCircle className="h-5 w-5 text-green-500 mx-auto" /></td>
+                      </tr>
+                      <tr>
+                        <td className="py-3">Multi-User Accounts</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3"><CheckCircle className="h-5 w-5 text-green-500 mx-auto" /></td>
+                      </tr>
+                      <tr>
+                        <td className="py-3">Rechtsberatung</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3">-</td>
+                        <td className="text-center py-3"><CheckCircle className="h-5 w-5 text-green-500 mx-auto" /></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
