@@ -219,7 +219,7 @@ export default function FounderDashboard() {
                     <Crown className="h-6 w-6 text-yellow-600 mr-3" />
                     <div>
                       <p className="font-semibold text-gray-900">Founder Tier</p>
-                      <p className="text-sm text-gray-500">€29,99/Monat</p>
+                      <p className="text-sm text-gray-500">€99/Monat</p>
                     </div>
                   </div>
                   

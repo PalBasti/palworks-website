@@ -29,7 +29,7 @@ PalWorks v2.0 ist eine **rückwärtskompatible Evolution** der bestehenden Contr
 └───────────────────────────────────────────────────┘
 
 ┌─ FOUNDER TIER ───────────────────────────────────┐
-│ • €29,99/Monat Subscription                      │
+│ • €99/Monat Subscription                          │
 │ • 25% Rabatt auf alle Verträge                   │
 │ • Erweiterte Template Bibliothek                 │
 │ • Priority Support (<4h)                         │
@@ -37,7 +37,7 @@ PalWorks v2.0 ist eine **rückwärtskompatible Evolution** der bestehenden Contr
 └───────────────────────────────────────────────────┘
 
 ┌─ ENTERPRISE TIER ────────────────────────────────┐
-│ • €99,99/Monat Subscription                      │
+│ • €499/Monat Subscription                         │
 │ • Alle Founder Features                          │
 │ • Custom Template Builder                        │
 │ • Multi-User Company Accounts                    │
@@ -218,14 +218,14 @@ ADD COLUMN IF NOT EXISTS is_authenticated BOOLEAN DEFAULT false;
 - ✅ E-Mail-Versand
 - ✅ Pay-per-use ohne Account
 
-### **Founder Features (€29,99/mo)**
+### **Founder Features (€99/mo)**
 - ✅ Alle Public Features
 - ✅ 25% Rabatt auf alle Verträge
 - ✅ Erweiterte Template Bibliothek
 - ✅ Priority Support (<4h)
 - ✅ Exklusive Vertragstypen
 
-### **Enterprise Features (€99,99/mo)**
+### **Enterprise Features (€499/mo)**
 - ✅ Alle Founder Features
 - ✅ Custom Template Builder
 - ✅ Multi-User Company Accounts
@@ -292,8 +292,8 @@ npm run db:migrate
 
 ### **Revenue Streams**
 1. **Existing**: Pay-per-use Verträge (€7,90 - €19,99)
-2. **New**: Founder Subscriptions (€29,99/mo)
-3. **New**: Enterprise Subscriptions (€99,99/mo)
+2. **New**: Founder Subscriptions (€99/mo)
+3. **New**: Enterprise Subscriptions (€499/mo)
 4. **Future**: Premium Legal Services
 
 ### **User Journey**

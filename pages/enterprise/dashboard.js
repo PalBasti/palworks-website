@@ -275,7 +275,7 @@ export default function EnterpriseDashboard() {
                     <Building className="h-6 w-6 text-purple-600 mr-3" />
                     <div>
                       <p className="font-semibold text-gray-900">Enterprise Tier</p>
-                      <p className="text-sm text-gray-500">€99,99/Monat</p>
+                      <p className="text-sm text-gray-500">€499/Monat</p>
                     </div>
                   </div>
                   

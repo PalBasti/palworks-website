@@ -286,7 +286,7 @@ export default function Home() {
                     <Crown className="h-6 w-6 text-yellow-500 mr-2" />
                     <h3 className="text-xl font-semibold">Founder</h3>
                   </div>
-                  <div className="text-4xl font-bold text-yellow-600 mb-1">€29,99</div>
+                  <div className="text-4xl font-bold text-yellow-600 mb-1">€99</div>
                   <p className="text-gray-500 mb-6">pro Monat</p>
                   
                   <ul className="text-left space-y-3 mb-8">
@@ -351,7 +351,7 @@ export default function Home() {
                     <Building className="h-6 w-6 text-purple-600 mr-2" />
                     <h3 className="text-xl font-semibold">Enterprise</h3>
                   </div>
-                  <div className="text-4xl font-bold text-purple-600 mb-1">€99,99</div>
+                  <div className="text-4xl font-bold text-purple-600 mb-1">€499</div>
                   <p className="text-gray-500 mb-6">pro Monat</p>
                   
                   <ul className="text-left space-y-3 mb-8">

@@ -139,14 +139,14 @@ function UpgradeRequired({ requiredRole }) {
       icon: Crown,
       name: 'Founder',
       color: 'yellow',
-      price: '29,99€',
+      price: '99€',
       description: 'Erweiterte Template-Bibliothek und günstigere Preise'
     },
     [USER_ROLES.ENTERPRISE]: {
       icon: Building,
       name: 'Enterprise',
       color: 'purple',
-      price: '99,99€',
+      price: '499€',
       description: 'Custom Templates, Rechtsberatung und White-Label Features'
     }
   }
