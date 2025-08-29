@@ -4,7 +4,7 @@ import Header from '../../components/shared/Header'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
 import { USER_ROLES } from '../../lib/supabase'
 import { useAuth } from '../../lib/contexts/AuthContext'
-import { Crown, FileText, TrendingUp, Clock, DollarSign, Users, Star } from 'lucide-react'
+import { Crown, FileText, TrendingUp, Clock, DollarSign, Users, Star, Building } from 'lucide-react'
 
 /**
  * Founder Dashboard - Exklusiver Bereich für Founder Tier
