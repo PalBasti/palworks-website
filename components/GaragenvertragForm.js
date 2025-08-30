@@ -32,7 +32,13 @@ export default function GaragenvertragForm({ onSubmit }) {
     
     // Bankdaten
     iban: '',
-    bank: ''
+    bank: '',
+
+    // Rechnungsempfänger (Pflicht)
+    billing_name: '',
+    billing_address: '',
+    billing_postal: '',
+    billing_city: ''
   })
 
   // ✅ E-MAIL & ADDON-STATES
@@ -119,6 +125,22 @@ export default function GaragenvertragForm({ onSubmit }) {
       newErrors.customer_email = 'Gültige E-Mail-Adresse für Vertragszustellung erforderlich'
     }
     
+    // Rechnungsempfänger Pflichtfelder
+    const requiredBillingFields = [
+      'billing_name', 'billing_address', 'billing_postal', 'billing_city'
+    ]
+    requiredBillingFields.forEach(field => {
+      if (!formData[field] || formData[field].toString().trim() === '') {
+        const fieldNames = {
+          'billing_name': 'Name des Rechnungsempfängers',
+          'billing_address': 'Rechnungsadresse',
+          'billing_postal': 'PLZ der Rechnungsadresse',
+          'billing_city': 'Ort der Rechnungsadresse'
+        }
+        newErrors[field] = `${fieldNames[field]} ist erforderlich`
+      }
+    })
+    
     // Basis-Pflichtfelder
     const requiredFields = ['start_date', 'rent']
     
@@ -140,6 +162,9 @@ export default function GaragenvertragForm({ onSubmit }) {
     if (formData.garage_postal && !/^\d{5}$/.test(formData.garage_postal)) {
       newErrors.garage_postal = 'PLZ muss 5 Ziffern haben'
     }
+    if (formData.billing_postal && !/^\d{5}$/.test(formData.billing_postal)) {
+      newErrors.billing_postal = 'PLZ muss 5 Ziffern haben'
+    }
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -153,6 +178,11 @@ export default function GaragenvertragForm({ onSubmit }) {
         ...formData,
         // E-Mail für Integration
         customer_email: customerEmail,
+        // Billing Daten
+        billing_name: formData.billing_name,
+        billing_address: formData.billing_address,
+        billing_postal: formData.billing_postal,
+        billing_city: formData.billing_city,
         billing_email: customerEmail, // Kompatibilität
         newsletter_signup: newsletterSignup,
         // Addons
@@ -190,8 +220,8 @@ export default function GaragenvertragForm({ onSubmit }) {
         <div className="lg:col-span-3">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="text-center mb-8 relative">
-              {/* 🔙 ZURÜCK-BUTTON (links oben) */}
-              <div className="absolute left-0 top-0">
+              {/* 🔙 ZURÜCK-BUTTON (links oben | mobil oben) */}
+              <div className="sm:absolute sm:left-0 sm:top-0">
                 <button
                   type="button"
                   onClick={() => window.location.href = '/'}
@@ -216,7 +246,7 @@ export default function GaragenvertragForm({ onSubmit }) {
 
             <form onSubmit={handleSubmit} className="space-y-8">
               
-              {/* ✅ 1. E-MAIL-SEKTION - ZUERST */}
+              {/* ✅ 1. E-MAIL + RECHNUNGSEMPFÄNGER - ZUERST */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
                   <Mail className="h-5 w-5 text-blue-600 mr-2" />
@@ -241,6 +271,71 @@ export default function GaragenvertragForm({ onSubmit }) {
                     <p className="text-sm text-gray-600 mt-2">
                       📱 Sie erhalten Rechnung und fertigen Vertrag automatisch per E-Mail
                     </p>
+                  </div>
+
+                  {/* Rechnungsempfänger: Name und Adresse (Pflicht) */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Vollständiger Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="billing_name"
+                        value={formData.billing_name || ''}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.billing_name ? 'border-red-500' : 'border-gray-300'}`}
+                        placeholder="Max Mustermann"
+                      />
+                      {errors.billing_name && <p className="text-red-500 text-sm mt-1">{errors.billing_name}</p>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rechnungsadresse <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="billing_address"
+                      value={formData.billing_address || ''}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.billing_address ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Musterstraße 123"
+                    />
+                    {errors.billing_address && <p className="text-red-500 text-sm mt-1">{errors.billing_address}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        PLZ <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="billing_postal"
+                        value={formData.billing_postal || ''}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.billing_postal ? 'border-red-500' : 'border-gray-300'}`}
+                        placeholder="12345"
+                        maxLength="5"
+                      />
+                      {errors.billing_postal && <p className="text-red-500 text-sm mt-1">{errors.billing_postal}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ort <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="billing_city"
+                        value={formData.billing_city || ''}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 ${errors.billing_city ? 'border-red-500' : 'border-gray-300'}`}
+                        placeholder="Berlin"
+                      />
+                      {errors.billing_city && <p className="text-red-500 text-sm mt-1">{errors.billing_city}</p>}
+                    </div>
                   </div>
 
                   <div className="flex items-start">
