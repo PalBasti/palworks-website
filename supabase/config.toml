@@ -1,0 +1,9 @@
+project_id = "nphsbwgeverterjbspuf"
+
+[migrations]
+dir = "supabase/migrations"
+
+[db]
+schema = "public"
+major_version = 15
+

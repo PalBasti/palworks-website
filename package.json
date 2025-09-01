@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "supabase:status": "supabase db status || true",
+    "supabase:pull": "supabase db pull",
+    "supabase:push:dry": "supabase db push --dry-run",
+    "supabase:push": "supabase db push",
+    "supabase:seed": "supabase db seed --file ./supabase/seed.sql",
+    "supabase:dump": "supabase db dump > backup_$(date +%Y%m%d).sql"
   },
   "dependencies": {
     "next": "14.0.0",
