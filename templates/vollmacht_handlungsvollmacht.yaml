@@ -38,6 +38,15 @@ fields:
     label: Bevollmächtigter – PLZ, Ort
     type: string
     required: true
+  - key: mehrere_vollmachtgeber
+    label: Mehrere Vollmachtgeber?
+    type: boolean
+    default: false
+  - key: vollmachtgeber_weitere
+    label: Weitere Vollmachtgeber (Freitext)
+    type: textarea
+    required: false
+    visible_if: mehrere_vollmachtgeber == true
   - key: bereich_gegenstand
     label: Bereich / Gegenstand der Handlungsvollmacht
     type: string
@@ -117,7 +126,7 @@ template:
     Bevollmächtigter: {{ bevollmaechtigter_name }}, {{ bevollmaechtigter_anschrift }}, {{ bevollmaechtigter_plz_ort }}
 
     § 1 ERTEILUNG DER HANDLUNGSVOLLMACHT
-    Hiermit erteile ich / erteilen wir dem oben genannten Bevollmächtigten Handlungsvollmacht in allen {{ bereich_gegenstand }}.
+    {% if mehrere_vollmachtgeber %}Hiermit erteilen wir dem oben genannten Bevollmächtigten Handlungsvollmacht in allen {{ bereich_gegenstand }}.{% else %}Hiermit erteile ich dem oben genannten Bevollmächtigten Handlungsvollmacht in allen {{ bereich_gegenstand }}.{% endif %}
 
     § 2 UMFANG DER VOLLMACHT
     Der Bevollmächtigte ist berechtigt, für den Arbeitgeber im Bereich {{ bereich_gegenstand }} alle gewöhnlich anfallenden Geschäfte zu tätigen (Handlungsvollmacht im Sinne des § 54 Abs. 1 HGB).

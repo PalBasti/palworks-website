@@ -18,6 +18,15 @@ fields:
     label: Vollmachtgeber – PLZ, Ort
     type: string
     required: true
+  - key: mehrere_vollmachtgeber
+    label: Mehrere Vollmachtgeber?
+    type: boolean
+    default: false
+  - key: vollmachtgeber_weitere
+    label: Weitere Vollmachtgeber (Freitext)
+    type: textarea
+    required: false
+    visible_if: mehrere_vollmachtgeber == true
   - key: bevollmaechtigter_name
     label: Bevollmächtigter – Name
     type: string
@@ -137,11 +146,11 @@ template:
     MUSTER 1: ALLGEMEINE VOLLMACHT
     ALLGEMEINE VOLLMACHT
 
-    Vollmachtgeber: {{ vollmachtgeber_name }}, {{ vollmachtgeber_anschrift }}, {{ vollmachtgeber_plz_ort }}
+    Vollmachtgeber: {{ vollmachtgeber_name }}, {{ vollmachtgeber_anschrift }}, {{ vollmachtgeber_plz_ort }}{% if mehrere_vollmachtgeber and vollmachtgeber_weitere %}; Weitere Vollmachtgeber: {{ vollmachtgeber_weitere }}{% endif %}
     Bevollmächtigter: {{ bevollmaechtigter_name }}, {{ bevollmaechtigter_anschrift }}, {{ bevollmaechtigter_plz_ort }}
 
     § 1 ERTEILUNG DER VOLLMACHT
-    Hiermit erteile ich dem oben genannten Bevollmächtigten Vollmacht.
+    {% if mehrere_vollmachtgeber %}Hiermit erteilen wir dem oben genannten Bevollmächtigten Vollmacht.{% else %}Hiermit erteile ich dem oben genannten Bevollmächtigten Vollmacht.{% endif %}
 
     Gegenstand der Vollmacht: {{ gegenstand_text }}
 
