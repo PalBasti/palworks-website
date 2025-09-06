@@ -1,0 +1,196 @@
+meta:
+  id: vollmacht_allgemein
+  title: Allgemeine Vollmacht (Deutschland)
+  jurisdiction: DE
+  version: 1.0.0
+  tags: [vollmacht, allgemein, bgb]
+
+fields:
+  - key: vollmachtgeber_name
+    label: Vollmachtgeber – Name/Firma
+    type: string
+    required: true
+  - key: vollmachtgeber_anschrift
+    label: Vollmachtgeber – Anschrift
+    type: string
+    required: true
+  - key: vollmachtgeber_plz_ort
+    label: Vollmachtgeber – PLZ, Ort
+    type: string
+    required: true
+  - key: mehrere_vollmachtgeber
+    label: Mehrere Vollmachtgeber?
+    type: boolean
+    default: false
+  - key: vollmachtgeber_weitere
+    label: Weitere Vollmachtgeber (Freitext)
+    type: textarea
+    required: false
+    visible_if: mehrere_vollmachtgeber == true
+  - key: bevollmaechtigter_name
+    label: Bevollmächtigter – Name
+    type: string
+    required: true
+  - key: bevollmaechtigter_anschrift
+    label: Bevollmächtigter – Anschrift
+    type: string
+    required: true
+  - key: bevollmaechtigter_plz_ort
+    label: Bevollmächtigter – PLZ, Ort
+    type: string
+    required: true
+  - key: gegenstand_text
+    label: Gegenstand der Vollmacht (konkrete Beschreibung)
+    type: textarea
+    required: true
+    help: Bitte möglichst konkret beschreiben (z.B. Vertretung gegenüber Behörde X für Vorgang Y)
+  - key: umfang_modus
+    label: Umfang der Vollmacht
+    type: select
+    required: true
+    options:
+      - id: umfassend
+        label: Umfassende Vollmacht (alle für §1 erforderlichen Handlungen)
+      - id: katalog
+        label: Konkreter Katalog (Auswahl einzelner Befugnisse)
+    default: umfassend
+  - key: katalog_gericht
+    label: Gerichtlich und außergerichtlich vertreten
+    type: boolean
+    required: false
+    visible_if: umfang_modus == 'katalog'
+  - key: katalog_vertraege
+    label: Verträge abschließen/ändern/kündigen; Willenserklärungen abgeben/entgegennehmen
+    type: boolean
+    required: false
+    visible_if: umfang_modus == 'katalog'
+  - key: katalog_behoerden
+    label: Behördliche Angelegenheiten erledigen
+    type: boolean
+    required: false
+    visible_if: umfang_modus == 'katalog'
+  - key: katalog_wertsachen
+    label: Wertsachen und Zahlungen entgegennehmen
+    type: boolean
+    required: false
+    visible_if: umfang_modus == 'katalog'
+  - key: katalog_post
+    label: Post und Pakete entgegennehmen
+    type: boolean
+    required: false
+    visible_if: umfang_modus == 'katalog'
+  - key: katalog_weitere
+    label: Weitere Handlungen (Freitext)
+    type: textarea
+    required: false
+    visible_if: umfang_modus == 'katalog'
+  - key: untervollmacht
+    label: Untervollmacht erlaubt?
+    type: select
+    options:
+      - id: erlaubt
+        label: Untervollmacht erlaubt
+      - id: nicht_erlaubt
+        label: Untervollmacht nicht erlaubt
+    default: nicht_erlaubt
+  - key: selbstkontrahierung
+    label: Befreiung vom § 181 BGB (Selbstkontrahierung)
+    type: boolean
+    default: false
+  - key: mehrfachvertretung
+    label: Befreiung vom § 181 BGB (Mehrfachvertretung)
+    type: boolean
+    default: false
+  - key: befristung
+    label: Befristung
+    type: select
+    options:
+      - id: unbefristet
+        label: Unbefristet (bis Widerruf)
+      - id: datum
+        label: Befristet (von/bis)
+      - id: zweck
+        label: Zweckbefristet (bis Erledigung)
+    default: unbefristet
+  - key: befristung_von
+    label: Befristung von (Datum)
+    type: date
+    required: false
+    visible_if: befristung == 'datum'
+  - key: befristung_bis
+    label: Befristung bis (Datum)
+    type: date
+    required: false
+    visible_if: befristung == 'datum'
+  - key: tod_erloeschen
+    label: Erlöschen durch Tod des Vollmachtgebers
+    type: select
+    options:
+      - id: nicht_erloeschen
+        label: Nicht erlöschen
+      - id: erloeschen
+        label: Erlöschen
+    default: erloeschen
+  - key: ort
+    label: Ort
+    type: string
+    required: true
+  - key: datum
+    label: Datum
+    type: date
+    required: true
+
+template:
+  filename: vollmacht_allgemein.txt
+  content: |
+    MUSTER 1: ALLGEMEINE VOLLMACHT
+    ALLGEMEINE VOLLMACHT
+
+    Vollmachtgeber: {{ vollmachtgeber_name }}, {{ vollmachtgeber_anschrift }}, {{ vollmachtgeber_plz_ort }}{% if mehrere_vollmachtgeber and vollmachtgeber_weitere %}; Weitere Vollmachtgeber: {{ vollmachtgeber_weitere }}{% endif %}
+    Bevollmächtigter: {{ bevollmaechtigter_name }}, {{ bevollmaechtigter_anschrift }}, {{ bevollmaechtigter_plz_ort }}
+
+    § 1 ERTEILUNG DER VOLLMACHT
+    {% if mehrere_vollmachtgeber %}Hiermit erteilen wir dem oben genannten Bevollmächtigten Vollmacht.{% else %}Hiermit erteile ich dem oben genannten Bevollmächtigten Vollmacht.{% endif %}
+
+    Gegenstand der Vollmacht: {{ gegenstand_text }}
+
+    § 2 UMFANG DER VOLLMACHT
+    {% if umfang_modus == 'umfassend' %}
+    Der Bevollmächtigte ist berechtigt, sämtliche für die Erledigung der unter § 1 angegebenen Angelegenheit erforderlichen Handlungen vorzunehmen sowie Erklärungen abzugeben und entgegenzunehmen.
+    {% else %}
+    Der Bevollmächtigte ist berechtigt, in meinem Namen folgende Handlungen vorzunehmen:
+    {% if katalog_gericht %}- gerichtlich und außergerichtlich zu vertreten, soweit gesetzlich zulässig
+    {% endif %}{% if katalog_vertraege %}- Verträge abzuschließen, zu ändern und zu kündigen; Willenserklärungen abzugeben und entgegenzunehmen
+    {% endif %}{% if katalog_behoerden %}- Behördliche Angelegenheiten zu erledigen, einschließlich dem Stellen von Anträgen sowie Abgabe und Entgegennahme von Erklärungen
+    {% endif %}{% if katalog_wertsachen %}- Wertsachen und Zahlungen entgegenzunehmen
+    {% endif %}{% if katalog_post %}- Post und Pakete entgegenzunehmen
+    {% endif %}{% if katalog_weitere %}- Weitere Handlungen: {{ katalog_weitere }}
+    {% endif %}
+    {% endif %}
+
+    § 3 BESONDERE BEFUGNISSE
+    {% if untervollmacht == 'erlaubt' %}- Untervollmacht erlaubt – Der Bevollmächtigte darf die Vollmacht ganz oder teilweise auf Dritte übertragen
+    {% else %}- Untervollmacht nicht erlaubt – Eine Übertragung der Vollmacht ist ausgeschlossen
+    {% endif %}{% if selbstkontrahierung %}
+    - Befreiung vom Selbstkontrahierungsverbot gemäß § 181 BGB: Der Bevollmächtigte ist berechtigt, als Vertreter des Vollmachtgebers Geschäfte mit sich selbst abzuschließen.
+    {% endif %}{% if mehrfachvertretung %}
+    - Befreiung vom Verbot der Mehrfachvertretung gemäß § 181 BGB: Der Bevollmächtigte ist berechtigt, auf mehreren Seiten eines Rechtsgeschäfts als Vertreter aufzutreten.
+    {% endif %}
+
+    § 4 WIDERRUF UND ERLÖSCHEN
+    Diese Vollmacht kann jederzeit widerrufen werden. Der Widerruf kann sowohl gegenüber dem Bevollmächtigten als auch gegenüber Dritten erklärt werden.
+    {% if befristung == 'unbefristet' %}
+    Diese Vollmacht gilt bis zum ausdrücklichen Widerruf.
+    {% elif befristung == 'datum' %}
+    Diese Vollmacht gilt vom {{ befristung_von }} bis zum {{ befristung_bis }}.
+    {% else %}
+    Diese Vollmacht gilt bis zur Erledigung der oben genannten Angelegenheit.
+    {% endif %}
+
+    Die Vollmacht soll durch den Tod des Vollmachtgebers {% if tod_erloeschen == 'nicht_erloeschen' %}nicht erlöschen{% else %}erlöschen{% endif %}.
+
+    {{ ort }}, {{ datum }}
+
+    ________________________
+    Unterschrift Vollmachtgeber
+
