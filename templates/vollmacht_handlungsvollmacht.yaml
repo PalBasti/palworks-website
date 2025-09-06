@@ -1,0 +1,155 @@
+meta:
+  id: vollmacht_handlungsvollmacht
+  title: Handlungsvollmacht für Unternehmer (Deutschland)
+  jurisdiction: DE
+  version: 1.0.0
+  tags: [vollmacht, handlungsvollmacht, hgb]
+
+fields:
+  - key: arbeitgeber_name
+    label: Unternehmen / Arbeitgeber – Name / Firma
+    type: string
+    required: true
+  - key: arbeitgeber_anschrift
+    label: Unternehmen / Arbeitgeber – Anschrift
+    type: string
+    required: true
+  - key: arbeitgeber_plz_ort
+    label: Unternehmen / Arbeitgeber – PLZ, Ort
+    type: string
+    required: true
+  - key: arbeitgeber_register
+    label: Amtsgericht / Register (HRA / HRB)
+    type: string
+    required: false
+  - key: arbeitgeber_vertretungsorgan
+    label: Vertretungsberechtigtes Organ (Name)
+    type: string
+    required: false
+  - key: bevollmaechtigter_name
+    label: Bevollmächtigter – Name
+    type: string
+    required: true
+  - key: bevollmaechtigter_anschrift
+    label: Bevollmächtigter – Anschrift
+    type: string
+    required: true
+  - key: bevollmaechtigter_plz_ort
+    label: Bevollmächtigter – PLZ, Ort
+    type: string
+    required: true
+  - key: bereich_gegenstand
+    label: Bereich / Gegenstand der Handlungsvollmacht
+    type: string
+    required: true
+    help: z.B. Personal, Vertrieb, Einkauf, IT oder Projekt/Spezialgegenstand
+  - key: grundstueck_rechte
+    label: Grundstücke veräußern/belasten, Wechselverbindlichkeiten, Darlehen, Prozessführung
+    type: select
+    options:
+      - id: berechtigt
+        label: Berechtigt (gemäß § 54 Abs. 2 HGB)
+      - id: nicht_berechtigt
+        label: Nicht berechtigt
+    default: nicht_berechtigt
+  - key: untervollmacht
+    label: Untervollmacht erlaubt?
+    type: select
+    options:
+      - id: erlaubt
+        label: Untervollmacht erlaubt
+      - id: nicht_erlaubt
+        label: Untervollmacht nicht erlaubt
+    default: nicht_erlaubt
+  - key: selbstkontrahierung
+    label: Befreiung vom § 181 BGB (Selbstkontrahierung)
+    type: boolean
+    default: false
+  - key: mehrfachvertretung
+    label: Befreiung vom § 181 BGB (Mehrfachvertretung)
+    type: boolean
+    default: false
+  - key: befristung
+    label: Befristung
+    type: select
+    options:
+      - id: unbefristet
+        label: Unbefristet (bis Widerruf)
+      - id: datum
+        label: Befristet (von/bis)
+      - id: zweck
+        label: Zweckbefristet (bis Erledigung)
+    default: unbefristet
+  - key: befristung_von
+    label: Befristung von (Datum)
+    type: date
+    required: false
+    visible_if: befristung == 'datum'
+  - key: befristung_bis
+    label: Befristung bis (Datum)
+    type: date
+    required: false
+    visible_if: befristung == 'datum'
+  - key: tod_erloeschen
+    label: Erlöschen durch Tod des Vollmachtgebers
+    type: select
+    options:
+      - id: nicht_erloeschen
+        label: Nicht erlöschen
+      - id: erloeschen
+        label: Erlöschen
+    default: erloeschen
+  - key: ort
+    label: Ort
+    type: string
+    required: true
+  - key: datum
+    label: Datum
+    type: date
+    required: true
+
+template:
+  filename: vollmacht_handlungsvollmacht.txt
+  content: |
+    MUSTER 4: Handlungsvollmacht (für Unternehmer/-n)
+
+    Unternehmen / Arbeitgeber: {{ arbeitgeber_name }}, {{ arbeitgeber_anschrift }}, {{ arbeitgeber_plz_ort }}{% if arbeitgeber_register %}, {{ arbeitgeber_register }}{% endif %}{% if arbeitgeber_vertretungsorgan %}, vertreten durch {{ arbeitgeber_vertretungsorgan }}{% endif %}
+    Bevollmächtigter: {{ bevollmaechtigter_name }}, {{ bevollmaechtigter_anschrift }}, {{ bevollmaechtigter_plz_ort }}
+
+    § 1 ERTEILUNG DER HANDLUNGSVOLLMACHT
+    Hiermit erteile ich / erteilen wir dem oben genannten Bevollmächtigten Handlungsvollmacht in allen {{ bereich_gegenstand }}.
+
+    § 2 UMFANG DER VOLLMACHT
+    Der Bevollmächtigte ist berechtigt, für den Arbeitgeber im Bereich {{ bereich_gegenstand }} alle gewöhnlich anfallenden Geschäfte zu tätigen (Handlungsvollmacht im Sinne des § 54 Abs. 1 HGB).
+    {% if grundstueck_rechte == 'berechtigt' %}
+    Der Bevollmächtigte ist berechtigt, Grundstücke zu veräußern oder zu belasten, Wechselverbindlichkeiten einzugehen, Darlehen aufzunehmen sowie zur Prozessführung (Handlungen nach § 54 Abs. 2 HGB).
+    {% else %}
+    Der Bevollmächtigte ist nicht berechtigt, Grundstücke zu veräußern oder zu belasten, Wechselverbindlichkeiten einzugehen, Darlehen aufzunehmen sowie zur Prozessführung (Handlungen nach § 54 Abs. 2 HGB).
+    {% endif %}
+
+    § 3 BESONDERE BEFUGNISSE
+    {% if untervollmacht == 'erlaubt' %}- Untervollmacht erlaubt – Der Bevollmächtigte darf die Vollmacht ganz oder teilweise auf Dritte übertragen
+    {% else %}- Untervollmacht nicht erlaubt – Eine Übertragung der Vollmacht ist ausgeschlossen
+    {% endif %}{% if selbstkontrahierung %}
+    - Befreiung vom Selbstkontrahierungsverbot gemäß § 181 BGB: Der Bevollmächtigte ist berechtigt, als Vertreter des Vollmachtgebers Geschäfte mit sich selbst abzuschließen.
+    {% endif %}{% if mehrfachvertretung %}
+    - Befreiung vom Verbot der Mehrfachvertretung gemäß § 181 BGB: Der Bevollmächtigte ist berechtigt, auf mehreren Seiten eines Rechtsgeschäfts als Vertreter aufzutreten.
+    {% endif %}
+
+    § 4 WIDERRUF UND ERLÖSCHEN
+    Diese Vollmacht kann jederzeit widerrufen werden. Der Widerruf kann sowohl gegenüber dem Bevollmächtigten als auch gegenüber Dritten erklärt werden.
+    {% if befristung == 'unbefristet' %}
+    Diese Vollmacht gilt bis zum ausdrücklichen Widerruf.
+    {% elif befristung == 'datum' %}
+    Diese Vollmacht gilt vom {{ befristung_von }} bis zum {{ befristung_bis }}.
+    {% else %}
+    Diese Vollmacht gilt bis zur Erledigung der oben genannten Angelegenheit.
+    {% endif %}
+
+    Die Vollmacht soll durch den Tod des Vollmachtgebers {% if tod_erloeschen == 'nicht_erloeschen' %}nicht erlöschen{% else %}erlöschen{% endif %}.
+
+    {{ ort }}, {{ datum }}
+
+    ________________________
+    Unterschrift Vollmachtgeber
+
